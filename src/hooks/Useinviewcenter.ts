@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, RefObject } from 'react'
+import { useState, useEffect, useRef, type RefObject } from 'react'
 
 interface UseInViewCenterOptions {
   threshold?: number
