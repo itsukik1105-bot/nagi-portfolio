@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { type Work } from '../data/works'
 
 interface WorksProps {
@@ -6,13 +6,130 @@ interface WorksProps {
   onWorkClick: (work: Work) => void
 }
 
+// 個別の作品カードコンポーネント
+function WorkCard({ work, onClick, isMobileOrTablet }: { 
+  work: Work
+  onClick: () => void
+  isMobileOrTablet: boolean 
+}) {
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [isInCenter, setIsInCenter] = useState(false)
+
+  useEffect(() => {
+    if (!isMobileOrTablet) return // PCではIntersection Observer不要
+    
+    const element = cardRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInCenter(entry.isIntersecting)
+      },
+      {
+        threshold: 0.5,
+        rootMargin: '-25% 0px -25% 0px', // 上下25%カット、中央50%で検出
+      }
+    )
+
+    observer.observe(element)
+
+    return () => observer.unobserve(element)
+  }, [isMobileOrTablet])
+
+  // スマホ時は中央検出、PC時はhoverで制御
+  const isColorActive = isMobileOrTablet ? isInCenter : false
+
+  return (
+    <div
+      ref={cardRef}
+      onClick={onClick}
+      className="group cursor-pointer fade-in-up"
+    >
+      {/* サムネイル */}
+      <div className="relative aspect-[16/10] bg-[#111] overflow-hidden mb-6">
+        <img
+          src={work.thumbnail}
+          alt={work.title}
+          className={`w-full h-full object-cover transition-all duration-700 ease-out
+            ${isMobileOrTablet 
+              ? (isColorActive ? 'grayscale-0 scale-[1.02]' : 'grayscale scale-100')
+              : 'grayscale group-hover:grayscale-0 group-hover:scale-[1.02]'
+            }
+          `}
+          loading="lazy"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+        <div 
+          className={`absolute inset-0 transition-opacity duration-500 pointer-events-none
+            ${isMobileOrTablet
+              ? (isColorActive ? 'bg-white/5 opacity-100' : 'bg-white/5 opacity-0')
+              : 'bg-white/5 opacity-0 group-hover:opacity-100'
+            }
+          `}
+        />
+      </div>
+
+      {/* テキスト情報 */}
+      <div className="flex justify-between items-start">
+        <div className="space-y-1">
+          <h3 
+            className={`text-xl md:text-2xl font-medium transition-colors duration-300
+              ${isMobileOrTablet
+                ? (isColorActive ? 'text-white' : 'text-[#ccc]')
+                : 'text-[#ccc] group-hover:text-white'
+              }
+            `}
+          >
+            {work.title}
+          </h3>
+          <p 
+            className={`text-xs tracking-widest uppercase transition-colors
+              ${isMobileOrTablet
+                ? (isColorActive ? 'text-[#777]' : 'text-[#555]')
+                : 'text-[#555] group-hover:text-[#777]'
+              }
+            `}
+          >
+            {work.category} — {work.year}
+          </p>
+        </div>
+        
+        <div 
+          className={`transition-all duration-500 text-white/50 text-xl
+            ${isMobileOrTablet
+              ? (isColorActive ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2')
+              : 'opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0'
+            }
+          `}
+        >
+          →
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function Works({ works, onWorkClick }: WorksProps) {
-  // 現在選択されているカテゴリー (デフォルトは "All")
   const [activeCategory, setActiveCategory] = useState("All")
+  const [isMobileOrTablet, setIsMobileOrTablet] = useState(false)
+
+  // モバイル/タブレット判定
+  useEffect(() => {
+    const checkDevice = () => {
+      const isSmallScreen = window.innerWidth < 1024
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      setIsMobileOrTablet(isSmallScreen || isTouchDevice)
+    }
+
+    checkDevice()
+    window.addEventListener('resize', checkDevice)
+    return () => window.removeEventListener('resize', checkDevice)
+  }, [])
 
   // データからユニークなカテゴリー一覧を抽出
   const categories = useMemo(() => {
-    // セット(重複排除)を使ってリスト化
     const uniqueCats = Array.from(new Set(works.map(w => w.category)))
     return ["All", ...uniqueCats]
   }, [works])
@@ -40,9 +157,8 @@ export function Works({ works, onWorkClick }: WorksProps) {
               `}
             >
               {cat}
-              {/* アクティブ時の下線 */}
               <span className={`absolute -bottom-4 left-0 w-full h-[2px] bg-white transition-transform duration-300 origin-left
-                ${activeCategory === cat ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-50 group-active:scale-x-50'}
+                ${activeCategory === cat ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-50'}
               `} />
             </button>
           ))}
@@ -57,41 +173,12 @@ export function Works({ works, onWorkClick }: WorksProps) {
       {/* 作品グリッド */}
       <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-24 min-h-[50vh]">
         {filteredWorks.map((work) => (
-          <div
+          <WorkCard
             key={work.id}
+            work={work}
             onClick={() => onWorkClick(work)}
-            className="group cursor-pointer fade-in-up" // アニメーションクラス付与
-          >
-            {/* サムネイル */}
-            <div className="relative aspect-[16/10] bg-[#111] overflow-hidden mb-6">
-              <img
-                src={work.thumbnail}
-                alt={work.title}
-                className="w-full h-full object-cover grayscale transition-all duration-700 ease-out group-hover:grayscale-0 group-hover:scale-[1.02] group-active:grayscale-0 group-active:scale-[1.02]"
-                loading="lazy"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-              <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-            </div>
-
-            {/* テキスト情報 */}
-            <div className="flex justify-between items-start">
-              <div className="space-y-1">
-                <h3 className="text-xl md:text-2xl font-medium text-[#ccc] group-hover:text-white group-active:text-white transition-colors duration-300">
-                  {work.title}
-                </h3>
-                <p className="text-xs text-[#555] tracking-widest uppercase group-hover:text-[#777] group-active:text-[#777] transition-colors">
-                  {work.category} — {work.year}
-                </p>
-              </div>
-              
-              <div className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 group-active:opacity-100 group-active:translate-x-0 transition-all duration-500 text-white/50 text-xl">
-                →
-              </div>
-            </div>
-          </div>
+            isMobileOrTablet={isMobileOrTablet}
+          />
         ))}
       </div>
 

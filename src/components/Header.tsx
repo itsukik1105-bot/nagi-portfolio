@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Button } from './ui/button'
-import { useGlitchText } from '../hooks/useGlitchText' // ★作成したフックをインポート
+import { useGlitchText } from '../hooks/useGlitchText'
 
 interface HeaderProps {
   siteName: string
@@ -12,7 +12,6 @@ interface HeaderProps {
 export function Header({ siteName, onAboutClick, onContactClick, onLogoClick }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   
-  // ★フックを使用して、ロゴテキストのグリッチ制御を行う
   const { displayText, triggerGlitch } = useGlitchText(siteName)
 
   useEffect(() => {
@@ -35,12 +34,12 @@ export function Header({ siteName, onAboutClick, onContactClick, onLogoClick }: 
       {/* ロゴエリア */}
       <div 
         onClick={onLogoClick}
-        onMouseEnter={triggerGlitch} // ★ホバー時にフックの関数を呼び出す
-        onTouchStart={triggerGlitch} // ★タッチ時にもフックの関数を呼び出す
+        onMouseEnter={triggerGlitch}
+        onTouchStart={triggerGlitch}
         className="cursor-pointer group mb-4 md:mb-0 text-center md:text-left"
       >
         <h1 className="text-sm font-bold tracking-[0.2em] text-white uppercase font-mono min-w-[120px]">
-          {displayText} {/* ★フックから返された、変化するテキストを表示 */}
+          {displayText}
         </h1>
       </div>
 

@@ -7,14 +7,12 @@ interface ContactProps {
 }
 
 export function Contact({ onBack }: ContactProps) {
-  // 送信状態管理
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle")
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  // フォーム送信ハンドラ (Formspree等のサービスを利用する場合)
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setStatus("submitting");
@@ -23,8 +21,6 @@ export function Contact({ onBack }: ContactProps) {
     const data = new FormData(form);
 
     try {
-      // ★重要: ここにご自身のFormspreeのエンドポイントURLを入れてください
-      // 例: "https://formspree.io/f/xay......"
       const response = await fetch("https://formspree.io/f/xzznlbaj", {
         method: "POST",
         body: data,

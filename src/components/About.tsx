@@ -20,15 +20,13 @@ export function About({ onContactClick }: AboutProps) {
             <img 
               src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1000&auto=format&fit=crop" 
               alt="Profile" 
-              // ★ここを元の仕様に戻しました
-              // 基本はモノクロ(grayscale)、ホバー時のみカラー(grayscale-0)
+              // デフォルトでカラー表示（grayscaleを削除）
               className="w-full h-full object-cover transition-all duration-700 ease-out 
-                grayscale group-hover:grayscale-0 
-                group-hover:scale-105"
+                group-hover:scale-105 group-active:scale-105"
             />
             
             {/* PCのみ：ホバー時に少し明るくするオーバーレイ */}
-            <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-700 pointer-events-none" />
+            <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent group-active:bg-transparent transition-colors duration-700 pointer-events-none" />
           </div>
         </div>
 
@@ -59,7 +57,7 @@ export function About({ onContactClick }: AboutProps) {
             <Button 
               onClick={onContactClick}
               variant="outline"
-              className="rounded-full px-8 py-6 bg-transparent border-white text-white hover:bg-white hover:text-black transition-all duration-300 tracking-widest text-xs font-bold"
+              className="rounded-full px-8 py-6 bg-transparent border-white text-white hover:bg-white hover:text-black active:bg-white active:text-black transition-all duration-300 tracking-widest text-xs font-bold"
             >
               CONTACT ME
             </Button>

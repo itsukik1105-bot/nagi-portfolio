@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Button } from './ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { type Work } from '../data/works'
@@ -8,15 +8,84 @@ interface WorkDetailProps {
   onBack: () => void
 }
 
+// ギャラリー画像コンポーネント（中央検出対応）
+function GalleryImage({ 
+  imageUrl, 
+  index, 
+  isMobileOrTablet 
+}: { 
+  imageUrl: string
+  index: number
+  isMobileOrTablet: boolean 
+}) {
+  const imageRef = useRef<HTMLDivElement>(null)
+  const [isInCenter, setIsInCenter] = useState(false)
+
+  useEffect(() => {
+    if (!isMobileOrTablet) return
+    
+    const element = imageRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInCenter(entry.isIntersecting)
+      },
+      {
+        threshold: 0.4,
+        rootMargin: '-20% 0px -20% 0px',
+      }
+    )
+
+    observer.observe(element)
+    return () => observer.unobserve(element)
+  }, [isMobileOrTablet])
+
+  const isColorActive = isMobileOrTablet ? isInCenter : false
+
+  return (
+    <div ref={imageRef} className="group">
+      <div className="aspect-[4/3] overflow-hidden bg-[#050505] mb-4">
+        <img
+          src={imageUrl}
+          alt={`Gallery ${index + 1}`}
+          className={`w-full h-full object-cover transition-all duration-700 ease-out
+            ${isMobileOrTablet
+              ? (isColorActive ? 'grayscale-0 scale-[1.01]' : 'grayscale scale-100')
+              : 'grayscale hover:grayscale-0 hover:scale-[1.01]'
+            }
+          `}
+          loading="lazy"
+        />
+      </div>
+      <div className="text-[10px] text-[#333] tracking-widest text-right">
+        {(index + 1).toString().padStart(2, '0')}
+      </div>
+    </div>
+  )
+}
+
 export function WorkDetail({ work, onBack }: WorkDetailProps) {
+  const [isMobileOrTablet, setIsMobileOrTablet] = useState(false)
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
+  // モバイル/タブレット判定
+  useEffect(() => {
+    const checkDevice = () => {
+      const isSmallScreen = window.innerWidth < 1024
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      setIsMobileOrTablet(isSmallScreen || isTouchDevice)
+    }
+
+    checkDevice()
+    window.addEventListener('resize', checkDevice)
+    return () => window.removeEventListener('resize', checkDevice)
+  }, [])
+
   const galleryImages = Array.isArray(work.gallery) ? work.gallery : [];
-  
-  // 変更点1: videoUrlがある場合のみメインエリアを表示する（サムネイルだけの表示はしない）
   const showMainVideo = !!work.videoUrl;
 
   return (
@@ -55,7 +124,7 @@ export function WorkDetail({ work, onBack }: WorkDetailProps) {
               src={work.videoUrl}
               controls
               playsInline
-              className="w-full aspect-video object-cover bg-[#0a0a0a] grayscale-[10%] hover:grayscale-0 active:grayscale-0 transition-all duration-1000"
+              className="w-full aspect-video object-cover bg-[#0a0a0a]"
               poster={work.thumbnail || ''}
             >
               <p className="p-4 text-center text-xs text-[#444]">Video not supported.</p>
@@ -63,33 +132,23 @@ export function WorkDetail({ work, onBack }: WorkDetailProps) {
           </div>
         )}
 
-        {/* 変更点2: ギャラリーエリアを説明文の上に移動 */}
+        {/* ギャラリーエリア */}
         {galleryImages.length > 0 && (
           <div className="mb-32 fade-in-up" style={{ animationDelay: showMainVideo ? '0.3s' : '0.2s' }}>
-            {/* Gallery見出し（任意ですが、区切りのために小さく入れると綺麗です） */}
-            {/* <h2 className="text-xs text-[#444] uppercase tracking-[0.2em] mb-8">Gallery</h2> */}
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-24">
               {galleryImages.map((imageUrl, index) => (
-                <div key={index} className="group">
-                  <div className="aspect-[4/3] overflow-hidden bg-[#050505] mb-4">
-                    <img
-                      src={imageUrl}
-                      alt={`Gallery ${index + 1}`}
-                      className="w-full h-full object-cover transition-all duration-700 ease-out grayscale hover:grayscale-0 hover:scale-[1.01] active:grayscale-0 active:scale-[1.01]"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div className="text-[10px] text-[#333] tracking-widest text-right">
-                    {(index + 1).toString().padStart(2, '0')}
-                  </div>
-                </div>
+                <GalleryImage
+                  key={index}
+                  imageUrl={imageUrl}
+                  index={index}
+                  isMobileOrTablet={isMobileOrTablet}
+                />
               ))}
             </div>
           </div>
         )}
 
-        {/* 説明文エリア（一番下に配置） */}
+        {/* 説明文エリア */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12 mb-40 fade-in-up" style={{ animationDelay: '0.4s' }}>
           <div className="md:col-span-4">
             <h2 className="text-xs text-[#444] uppercase tracking-[0.2em] mb-4">Description</h2>
