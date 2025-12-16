@@ -17,19 +17,18 @@ export function About({ onContactClick }: AboutProps) {
           <div className="absolute -inset-4 border border-white/20 rounded-sm translate-x-4 translate-y-4 hidden md:block" />
           
           <div className="relative overflow-hidden rounded-sm aspect-[3/4] md:aspect-[4/5] group">
-            {/* TODO: 自分の写真に変更してください 
-               publicフォルダに画像を置いて、 src="/my-photo.jpg" のように指定します
-            */}
             <img 
               src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1000&auto=format&fit=crop" 
               alt="Profile" 
+              // ★ここを元の仕様に戻しました
+              // 基本はモノクロ(grayscale)、ホバー時のみカラー(grayscale-0)
               className="w-full h-full object-cover transition-all duration-700 ease-out 
-                grayscale-0 md:grayscale md:group-hover:grayscale-0 
-                md:group-hover:scale-105"
+                grayscale group-hover:grayscale-0 
+                group-hover:scale-105"
             />
             
             {/* PCのみ：ホバー時に少し明るくするオーバーレイ */}
-            <div className="absolute inset-0 bg-black/20 md:group-hover:bg-transparent transition-colors duration-700 pointer-events-none" />
+            <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-700 pointer-events-none" />
           </div>
         </div>
 
