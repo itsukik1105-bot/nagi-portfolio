@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Button } from './ui/button'
 import { X, ArrowUpRight } from 'lucide-react'
 
@@ -7,12 +7,135 @@ interface AboutSectionProps {
   siteConfig: any
 }
 
+// Experience項目コンポーネント（中央検出対応）
+function ExperienceItem({ 
+  exp, 
+  index, 
+  isMobileOrTablet 
+}: { 
+  exp: any
+  index: number
+  isMobileOrTablet: boolean 
+}) {
+  const itemRef = useRef<HTMLDivElement>(null)
+  const [isInCenter, setIsInCenter] = useState(false)
+
+  useEffect(() => {
+    if (!isMobileOrTablet) return
+    
+    const element = itemRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInCenter(entry.isIntersecting)
+      },
+      {
+        threshold: 0.4,
+        rootMargin: '-25% 0px -25% 0px',
+      }
+    )
+
+    observer.observe(element)
+    return () => observer.unobserve(element)
+  }, [isMobileOrTablet])
+
+  // スマホ時は中央検出、PC時はhoverで制御（group-hover/listで）
+  const isActive = isMobileOrTablet ? isInCenter : false
+
+  return (
+    <div 
+      ref={itemRef}
+      className={`group/item relative transition-all duration-500
+        ${isMobileOrTablet 
+          ? '' // スマホ時はgroup/listの透明度制御を使わない
+          : 'group-hover/list:opacity-30 hover:!opacity-100'
+        }
+      `}
+    >
+      {/* ドット装飾 */}
+      <div 
+        className={`absolute -left-[29px] sm:-left-[37px] md:-left-[53px] top-2 w-3 h-3 rounded-full border transition-all duration-300
+          ${isMobileOrTablet
+            ? (isActive 
+                ? 'bg-white border-white shadow-[0_0_10px_rgba(255,255,255,0.8)]' 
+                : 'bg-[#111] border-[#333]')
+            : 'bg-[#111] border-[#333] group-hover/item:bg-white group-hover/item:border-white group-hover/item:shadow-[0_0_10px_rgba(255,255,255,0.8)]'
+          }
+        `}
+      />
+      
+      {/* 1. 期間 (Period) */}
+      <span 
+        className={`block text-[10px] tracking-widest mb-2 font-mono transition-colors
+          ${isMobileOrTablet
+            ? (isActive ? 'text-white' : 'text-[#555]')
+            : 'text-[#555] group-hover/item:text-white'
+          }
+        `}
+      >
+        {exp.period}
+      </span>
+
+      {/* 2. 会社名 (Company) */}
+      <h3 
+        className={`text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-2 tracking-tight transition-colors
+          ${isMobileOrTablet
+            ? (isActive ? 'text-white' : 'text-[#e0e0e0]')
+            : 'text-[#e0e0e0] group-hover/item:text-white'
+          }
+        `}
+      >
+        {exp.company}
+      </h3>
+
+      {/* 3. 役職 (Position) */}
+      <p 
+        className={`text-sm md:text-base mb-3 lg:mb-4 font-medium uppercase tracking-wider transition-colors
+          ${isMobileOrTablet
+            ? (isActive ? 'text-[#ccc]' : 'text-[#888]')
+            : 'text-[#888] group-hover/item:text-[#ccc]'
+          }
+        `}
+      >
+        {exp.position}
+      </p>
+      
+      {/* 4. 詳細説明 (Description) */}
+      <p 
+        className={`text-xs md:text-sm leading-relaxed max-w-lg font-light text-justify transition-colors
+          ${isMobileOrTablet
+            ? (isActive ? 'text-[#999]' : 'text-[#555]')
+            : 'text-[#555] group-hover/item:text-[#999]'
+          }
+        `}
+      >
+         {exp.description}
+      </p>
+    </div>
+  )
+}
+
 export function AboutSection({ onBack, siteConfig }: AboutSectionProps) {
   const { about } = siteConfig
+  const [isMobileOrTablet, setIsMobileOrTablet] = useState(false)
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // モバイル/タブレット判定
+  useEffect(() => {
+    const checkDevice = () => {
+      const isSmallScreen = window.innerWidth < 1024
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      setIsMobileOrTablet(isSmallScreen || isTouchDevice)
+    }
+
+    checkDevice()
+    window.addEventListener('resize', checkDevice)
+    return () => window.removeEventListener('resize', checkDevice)
+  }, [])
 
   // 3段構成用のラベル定義
   const bioLabels = ["BACKGROUND", "CAREER", "VISION"];
@@ -47,7 +170,7 @@ export function AboutSection({ onBack, siteConfig }: AboutSectionProps) {
               <img 
                 src={about.profileImage} 
                 alt={about.title}
-                // デフォルトでカラー表示（grayscaleを削除）
+                // デフォルトでカラー表示
                 className="w-full h-full object-cover transition-all duration-1000 ease-out group-hover:scale-[1.05] group-active:scale-[1.05]"
               />
               <div className="absolute inset-0 bg-black z-20 animate-curtain-reveal pointer-events-none"></div>
@@ -102,7 +225,7 @@ export function AboutSection({ onBack, siteConfig }: AboutSectionProps) {
               </div>
             </div>
 
-            {/* Experience */}
+            {/* Experience - 中央検出対応 */}
             <div className="mb-20 lg:mb-32 fade-in-up-delay-2">
               <h2 className="text-[10px] text-[#444] font-bold tracking-[0.3em] uppercase mb-8 lg:mb-12 flex items-center gap-4">
                 Experience
@@ -111,33 +234,12 @@ export function AboutSection({ onBack, siteConfig }: AboutSectionProps) {
               
               <div className="border-l border-[#222] ml-2 md:ml-4 pl-6 sm:pl-8 md:pl-12 space-y-12 lg:space-y-16 group/list">
                 {about.experience.map((exp: any, index: number) => (
-                  <div 
-                    key={index} 
-                    className="group/item relative transition-all duration-500 group-hover/list:opacity-30 hover:!opacity-100 active:!opacity-100"
-                  >
-                    {/* ドット装飾 */}
-                    <div className="absolute -left-[29px] sm:-left-[37px] md:-left-[53px] top-2 w-3 h-3 bg-[#111] rounded-full border border-[#333] group-hover/item:bg-white group-hover/item:border-white group-hover/item:shadow-[0_0_10px_rgba(255,255,255,0.8)] group-active/item:bg-white group-active/item:border-white group-active/item:shadow-[0_0_10px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-                    
-                    {/* 1. 期間 (Period) */}
-                    <span className="block text-[10px] text-[#555] tracking-widest mb-2 font-mono group-hover/item:text-white group-active/item:text-white transition-colors">
-                      {exp.period}
-                    </span>
-
-                    {/* 2. 会社名 (Company) - 一番大きく強調 */}
-                    <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-2 text-[#e0e0e0] group-hover/item:text-white group-active/item:text-white transition-colors tracking-tight">
-                      {exp.company}
-                    </h3>
-
-                    {/* 3. 役職 (Position) - 少し控えめに */}
-                    <p className="text-sm md:text-base text-[#888] mb-3 lg:mb-4 font-medium group-hover/item:text-[#ccc] group-active/item:text-[#ccc] transition-colors uppercase tracking-wider">
-                      {exp.position}
-                    </p>
-                    
-                    {/* 4. 詳細説明 (Description) */}
-                    <p className="text-xs md:text-sm text-[#555] leading-relaxed max-w-lg group-hover/item:text-[#999] group-active/item:text-[#999] transition-colors font-light text-justify">
-                       {exp.description}
-                    </p>
-                  </div>
+                  <ExperienceItem
+                    key={index}
+                    exp={exp}
+                    index={index}
+                    isMobileOrTablet={isMobileOrTablet}
+                  />
                 ))}
               </div>
             </div>
