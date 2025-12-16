@@ -53,7 +53,7 @@ export function Contact({ onBack }: ContactProps) {
           variant="ghost"
           size="icon"
           onClick={onBack}
-          className="rounded-full w-12 h-12 hover:bg-white/20 text-white transition-colors border border-transparent hover:border-white/20"
+          className="rounded-full w-12 h-12 hover:bg-white/20 active:bg-white/20 text-white transition-colors border border-transparent hover:border-white/20 active:border-white/20"
         >
           <X className="w-5 h-5" />
         </Button>
@@ -145,10 +145,10 @@ export function Contact({ onBack }: ContactProps) {
                   <button
                     type="submit"
                     disabled={status === "submitting"}
-                    className="group flex items-center gap-4 text-sm tracking-[0.2em] uppercase hover:text-[#888] transition-colors disabled:opacity-50"
+                    className="group flex items-center gap-4 text-sm tracking-[0.2em] uppercase hover:text-[#888] active:text-[#888] transition-colors disabled:opacity-50"
                   >
                     {status === "submitting" ? "Sending..." : "Send Message"}
-                    <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all duration-300">
+                    <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center group-hover:bg-white group-hover:text-black group-active:bg-white group-active:text-black transition-all duration-300">
                       <ArrowRight className="w-4 h-4" />
                     </div>
                   </button>

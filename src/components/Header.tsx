@@ -36,6 +36,7 @@ export function Header({ siteName, onAboutClick, onContactClick, onLogoClick }: 
       <div 
         onClick={onLogoClick}
         onMouseEnter={triggerGlitch} // ★ホバー時にフックの関数を呼び出す
+        onTouchStart={triggerGlitch} // ★タッチ時にもフックの関数を呼び出す
         className="cursor-pointer group mb-4 md:mb-0 text-center md:text-left"
       >
         <h1 className="text-sm font-bold tracking-[0.2em] text-white uppercase font-mono min-w-[120px]">
@@ -48,14 +49,14 @@ export function Header({ siteName, onAboutClick, onContactClick, onLogoClick }: 
         <Button
           variant="ghost"
           onClick={onAboutClick}
-          className="text-xs font-medium tracking-[0.2em] text-white hover:text-white/60 hover:bg-transparent transition-colors uppercase p-0"
+          className="text-xs font-medium tracking-[0.2em] text-white hover:text-white/60 active:text-white/60 hover:bg-transparent active:bg-transparent transition-colors uppercase p-0"
         >
           Profile
         </Button>
         <Button
           variant="ghost"
           onClick={onContactClick}
-          className="text-xs font-medium tracking-[0.2em] text-white hover:text-white/60 hover:bg-transparent transition-colors uppercase p-0"
+          className="text-xs font-medium tracking-[0.2em] text-white hover:text-white/60 active:text-white/60 hover:bg-transparent active:bg-transparent transition-colors uppercase p-0"
         >
           Contact
         </Button>

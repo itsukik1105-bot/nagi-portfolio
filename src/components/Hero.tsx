@@ -67,9 +67,10 @@ export function Hero({ videoUrl, title, subtitle, onAboutClick }: HeroProps) {
             variant="outline" 
             onClick={onAboutClick}
             onMouseEnter={triggerButtonGlitch} // ホバー時のエフェクト発火
-            className="group rounded-full px-8 py-5 md:px-10 md:py-6 bg-white/5 backdrop-blur-sm border border-white/20 text-white hover:bg-white hover:text-black transition-all duration-700 ease-out tracking-[0.2em] text-[10px] font-bold"
+            onTouchStart={triggerButtonGlitch} // タッチ時のエフェクト発火
+            className="group rounded-full px-8 py-5 md:px-10 md:py-6 bg-white/5 backdrop-blur-sm border border-white/20 text-white hover:bg-white hover:text-black active:bg-white active:text-black transition-all duration-700 ease-out tracking-[0.2em] text-[10px] font-bold"
           >
-            <span className="group-hover:scale-105 inline-block transition-transform duration-300 font-mono">
+            <span className="group-hover:scale-105 group-active:scale-105 inline-block transition-transform duration-300 font-mono">
               {buttonText}
             </span>
           </Button>

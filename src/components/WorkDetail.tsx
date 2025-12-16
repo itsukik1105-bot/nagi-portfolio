@@ -27,7 +27,7 @@ export function WorkDetail({ work, onBack }: WorkDetailProps) {
         <Button
           variant="ghost"
           onClick={onBack}
-          className="text-white hover:text-white/60 p-0 hover:bg-transparent transition-colors duration-300"
+          className="text-white hover:text-white/60 active:text-white/60 p-0 hover:bg-transparent active:bg-transparent transition-colors duration-300"
         >
           <ArrowLeft className="w-5 h-5 mr-2" />
           <span className="text-xs tracking-[0.2em] font-medium uppercase">Back</span>
@@ -55,7 +55,7 @@ export function WorkDetail({ work, onBack }: WorkDetailProps) {
               src={work.videoUrl}
               controls
               playsInline
-              className="w-full aspect-video object-cover bg-[#0a0a0a] grayscale-[10%] hover:grayscale-0 transition-all duration-1000"
+              className="w-full aspect-video object-cover bg-[#0a0a0a] grayscale-[10%] hover:grayscale-0 active:grayscale-0 transition-all duration-1000"
               poster={work.thumbnail || ''}
             >
               <p className="p-4 text-center text-xs text-[#444]">Video not supported.</p>
@@ -76,7 +76,7 @@ export function WorkDetail({ work, onBack }: WorkDetailProps) {
                     <img
                       src={imageUrl}
                       alt={`Gallery ${index + 1}`}
-                      className="w-full h-full object-cover transition-all duration-700 ease-out grayscale hover:grayscale-0 hover:scale-[1.01]"
+                      className="w-full h-full object-cover transition-all duration-700 ease-out grayscale hover:grayscale-0 hover:scale-[1.01] active:grayscale-0 active:scale-[1.01]"
                       loading="lazy"
                     />
                   </div>

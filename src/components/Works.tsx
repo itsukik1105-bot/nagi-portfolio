@@ -36,13 +36,13 @@ export function Works({ works, onWorkClick }: WorksProps) {
               key={cat}
               onClick={() => setActiveCategory(cat)}
               className={`text-sm tracking-[0.2em] uppercase transition-colors duration-300 relative group
-                ${activeCategory === cat ? 'text-white' : 'text-[#444] hover:text-[#888]'}
+                ${activeCategory === cat ? 'text-white' : 'text-[#444] hover:text-[#888] active:text-[#888]'}
               `}
             >
               {cat}
               {/* アクティブ時の下線 */}
               <span className={`absolute -bottom-4 left-0 w-full h-[2px] bg-white transition-transform duration-300 origin-left
-                ${activeCategory === cat ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-50'}
+                ${activeCategory === cat ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-50 group-active:scale-x-50'}
               `} />
             </button>
           ))}
@@ -67,27 +67,27 @@ export function Works({ works, onWorkClick }: WorksProps) {
               <img
                 src={work.thumbnail}
                 alt={work.title}
-                className="w-full h-full object-cover grayscale transition-all duration-700 ease-out group-hover:grayscale-0 group-hover:scale-[1.02]"
+                className="w-full h-full object-cover grayscale transition-all duration-700 ease-out group-hover:grayscale-0 group-hover:scale-[1.02] group-active:grayscale-0 group-active:scale-[1.02]"
                 loading="lazy"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
               />
-              <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+              <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
             </div>
 
             {/* テキスト情報 */}
             <div className="flex justify-between items-start">
               <div className="space-y-1">
-                <h3 className="text-xl md:text-2xl font-medium text-[#ccc] group-hover:text-white transition-colors duration-300">
+                <h3 className="text-xl md:text-2xl font-medium text-[#ccc] group-hover:text-white group-active:text-white transition-colors duration-300">
                   {work.title}
                 </h3>
-                <p className="text-xs text-[#555] tracking-widest uppercase group-hover:text-[#777] transition-colors">
+                <p className="text-xs text-[#555] tracking-widest uppercase group-hover:text-[#777] group-active:text-[#777] transition-colors">
                   {work.category} — {work.year}
                 </p>
               </div>
               
-              <div className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500 text-white/50 text-xl">
+              <div className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 group-active:opacity-100 group-active:translate-x-0 transition-all duration-500 text-white/50 text-xl">
                 →
               </div>
             </div>

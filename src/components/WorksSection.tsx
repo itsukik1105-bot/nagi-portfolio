@@ -32,11 +32,11 @@ export function WorksSection({ works, onWorkClick }: WorksSectionProps) {
                 <ImageWithFallback
                   src={work.thumbnail}
                   alt={work.title}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 group-active:scale-105"
                 />
                 
                 {/* ホバー時の暗幕 */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 group-active:bg-black/20 transition-colors duration-300" />
                 
                 {/* カテゴリーバッジ */}
                 <div className="absolute top-4 left-4">
@@ -47,7 +47,7 @@ export function WorksSection({ works, onWorkClick }: WorksSectionProps) {
               </div>
               
               <div className="space-y-2">
-                <h3 className="text-xl group-hover:text-white/80 transition-colors">
+                <h3 className="text-xl group-hover:text-white/80 group-active:text-white/80 transition-colors">
                   {work.title}
                 </h3>
                 <div className="flex items-center space-x-3 text-sm text-white/50">
