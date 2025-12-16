@@ -10,11 +10,9 @@ interface AboutSectionProps {
 // Experience項目コンポーネント（中央検出対応）
 function ExperienceItem({ 
   exp, 
-  index, 
   isMobileOrTablet 
 }: { 
   exp: any
-  index: number
   isMobileOrTablet: boolean 
 }) {
   const itemRef = useRef<HTMLDivElement>(null)
@@ -237,7 +235,6 @@ export function AboutSection({ onBack, siteConfig }: AboutSectionProps) {
                   <ExperienceItem
                     key={index}
                     exp={exp}
-                    index={index}
                     isMobileOrTablet={isMobileOrTablet}
                   />
                 ))}
