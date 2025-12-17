@@ -18,7 +18,7 @@ export function About({ onContactClick }: AboutProps) {
           
           <div className="relative overflow-hidden rounded-sm aspect-[3/4] md:aspect-[4/5] group">
             <img 
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1000&auto=format&fit=crop" 
+              src="https://storage.googleapis.com/studio-design-asset-files/projects/bXqzDJDpWD/s-623x830_v-fs_webp_0a39e6e8-02c9-4d41-ae2e-7165a4d57202.jpg" 
               alt="Profile" 
               // デフォルトでカラー表示（grayscaleを削除）
               className="w-full h-full object-cover transition-all duration-700 ease-out 

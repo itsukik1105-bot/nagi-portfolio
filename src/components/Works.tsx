@@ -47,20 +47,27 @@ function WorkCard({ work, onClick, isMobileOrTablet }: {
     >
       {/* サムネイル */}
       <div className="relative aspect-[16/10] bg-[#111] overflow-hidden mb-6">
-        <img
-          src={work.thumbnail}
-          alt={work.title}
-          className={`w-full h-full object-cover transition-all duration-700 ease-out
-            ${isMobileOrTablet 
-              ? (isColorActive ? 'grayscale-0 scale-[1.02]' : 'grayscale scale-100')
-              : 'grayscale group-hover:grayscale-0 group-hover:scale-[1.02]'
-            }
-          `}
-          loading="lazy"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none';
-          }}
-        />
+        {work.thumbnail ? (
+          <img
+            src={work.thumbnail}
+            alt={work.title}
+            className={`w-full h-full object-cover transition-all duration-700 ease-out
+              ${isMobileOrTablet 
+                ? (isColorActive ? 'grayscale-0 scale-[1.02]' : 'grayscale scale-100')
+                : 'grayscale group-hover:grayscale-0 group-hover:scale-[1.02]'
+              }
+            `}
+            loading="lazy"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        ) : (
+          // サムネイルがない場合のプレースホルダー
+          <div className="w-full h-full bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] flex items-center justify-center">
+            <span className="text-4xl font-bold text-[#333]">{work.title.charAt(0)}</span>
+          </div>
+        )}
         <div 
           className={`absolute inset-0 transition-opacity duration-500 pointer-events-none
             ${isMobileOrTablet
@@ -73,7 +80,7 @@ function WorkCard({ work, onClick, isMobileOrTablet }: {
 
       {/* テキスト情報 */}
       <div className="flex justify-between items-start">
-        <div className="space-y-1">
+        <div className="space-y-2">
           <h3 
             className={`text-xl md:text-2xl font-medium transition-colors duration-300
               ${isMobileOrTablet
@@ -84,16 +91,25 @@ function WorkCard({ work, onClick, isMobileOrTablet }: {
           >
             {work.title}
           </h3>
-          <p 
-            className={`text-xs tracking-widest uppercase transition-colors
+          {/* カテゴリー / 年 / 役割 を表示 */}
+          <div 
+            className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tracking-widest uppercase transition-colors
               ${isMobileOrTablet
                 ? (isColorActive ? 'text-[#777]' : 'text-[#555]')
                 : 'text-[#555] group-hover:text-[#777]'
               }
             `}
           >
-            {work.category} — {work.year}
-          </p>
+            <span>{work.category}</span>
+            <span className="text-[#333]">—</span>
+            <span>{work.year}</span>
+            {work.role && (
+              <>
+                <span className="text-[#333]">—</span>
+                <span className="normal-case tracking-normal">{work.role}</span>
+              </>
+            )}
+          </div>
         </div>
         
         <div 
