@@ -48,13 +48,7 @@ function PlayButton({ onClick, isExternal = false }: { onClick: () => void; isEx
 }
 
 // 動画プレーヤーコンポーネント（サムネイル + PLAYボタン → 再生）
-function VideoPlayer({ 
-  work, 
-  isMobileOrTablet 
-}: { 
-  work: Work
-  isMobileOrTablet: boolean 
-}) {
+function VideoPlayer({ work }: { work: Work }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -281,7 +275,7 @@ export function WorkDetail({ work, onBack }: WorkDetailProps) {
         {/* 動画エリア（統一PLAYボタンUI） */}
         {hasAnyVideo && (
           <div className="relative w-full mb-16 md:mb-32 fade-in-up" style={{ animationDelay: '0.2s' }}>
-            <VideoPlayer work={work} isMobileOrTablet={isMobileOrTablet} />
+            <VideoPlayer work={work} />
           </div>
         )}
 
