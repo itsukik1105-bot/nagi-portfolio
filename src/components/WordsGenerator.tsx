@@ -13,10 +13,11 @@ export function WordsGenerator() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
+  
   const inputRef = useRef<HTMLInputElement>(null)
   const sectionRef = useRef<HTMLElement>(null)
 
-  // スクロール検知（フローティングボタンの表示制御）
+  // スクロール検知
   useEffect(() => {
     const handleScroll = () => {
       if (!sectionRef.current) return
@@ -24,11 +25,8 @@ export function WordsGenerator() {
       const scrollY = window.scrollY
       const windowHeight = window.innerHeight
       const sectionTop = sectionRef.current.offsetTop
-
-      // ジェネレーターが表示領域に入ったらボタンを消す
       const isSectionInView = scrollY + windowHeight > sectionTop + 100
       
-      // ある程度スクロールしたら表示、ただしセクションが見えてきたら消す
       if (isSectionInView) {
         setIsVisible(false)
       } else {
@@ -51,14 +49,12 @@ export function WordsGenerator() {
     setIsTyping(true)
     setDisplayedWords('')
     
-    // 文字列を配列に分解（サロゲートペア対応）
     const text = story.body || ''
     const chars = Array.from(text)
     let index = 0
     
     const timer = setInterval(() => {
       if (index < chars.length) {
-        // undefinedチェックを追加して確実に文字を追加
         const char = chars[index]
         if (char !== undefined) {
           setDisplayedWords(prev => prev + char)
@@ -68,14 +64,13 @@ export function WordsGenerator() {
         clearInterval(timer)
         setIsTyping(false)
       }
-    }, 45)
+    }, 30)
 
     return () => clearInterval(timer)
   }, [story, isGenerating])
 
   const scrollToGenerator = () => {
     sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    // スクロール後にフォーカス
     setTimeout(() => {
       inputRef.current?.focus()
     }, 800)
@@ -92,11 +87,14 @@ export function WordsGenerator() {
     setDisplayedWords('')
 
     try {
-      // APIキーのチェック
       const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
       
+      // APIキーの詳細なチェック
       if (!apiKey) {
-        throw new Error('API Key is missing')
+        throw new Error('APIキー (.env) が見つかりません。')
+      }
+      if (apiKey === 'nagi-portfolio-api-key') {
+        throw new Error('APIキーが初期設定（nagi-portfolio-api-key）のままです。.envファイルを正しいキーに書き換えてください。')
       }
 
       const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -129,13 +127,28 @@ JSON形式のみを出力してください。
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error?.message || 'API Request Failed')
+        const errorText = await response.text()
+        let errorMessage = `HTTP Error: ${response.status}`
+        
+        // エラー詳細の解析
+        if (response.status === 401) {
+          errorMessage = '認証エラー (401): APIキーが無効です。'
+        } else {
+          try {
+            const errorJson = JSON.parse(errorText)
+            if (errorJson.error && errorJson.error.message) {
+              errorMessage += ` - ${errorJson.error.message}`
+            }
+          } catch {
+            errorMessage += ` - ${errorText}`
+          }
+        }
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
       
-      // コンテンツの抽出
+      // コンテンツ抽出
       let generatedText = ''
       if (data.content && Array.isArray(data.content)) {
         generatedText = data.content
@@ -144,7 +157,7 @@ JSON形式のみを出力してください。
           .join('')
       }
 
-      // JSONの抽出（Markdown記法が含まれる場合に対応）
+      // JSON抽出
       const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
       const jsonString = jsonMatch ? jsonMatch[0] : generatedText
 
@@ -155,19 +168,18 @@ JSON形式のみを出力してください。
           body: parsed.body || generatedText
         })
       } catch (e) {
-        // JSONパース失敗時はテキストをそのまま本文として扱う
         setStory({
           title: '断片',
-          body: generatedText
+          body: generatedText.replace(/[\{\}"]/g, '')
         })
       }
 
-    } catch (error) {
-      console.error('Generation error:', error)
-      // エラー時のフォールバック
+    } catch (error: any) {
+      console.error('Generation Error:', error)
       setStory({
-        title: '接続エラー',
-        body: '言葉が降りてこない夜もある。APIキーの設定を確認してください——'
+        title: 'エラー発生',
+        // エラー内容を画面に表示
+        body: `[SYSTEM ERROR] ${error.message || '不明なエラーが発生しました。'}`
       })
     } finally {
       setIsGenerating(false)
@@ -182,7 +194,6 @@ JSON形式のみを出力してください。
 
   return (
     <>
-      {/* フローティングボタン（スクロール用） */}
       <button
         onClick={scrollToGenerator}
         className={`fixed bottom-8 right-8 z-40 group transition-all duration-700 ${
@@ -202,7 +213,6 @@ JSON形式のみを出力してください。
         </div>
       </button>
 
-      {/* ジェネレーターセクション（ページ下部に配置） */}
       <section 
         id="words-generator" 
         ref={sectionRef}
@@ -216,16 +226,14 @@ JSON形式のみを出力してください。
               <span className="text-[11px] tracking-[0.5em] text-white/70 uppercase font-medium">Story Generator</span>
               <div className="w-12 md:w-20 h-px bg-gradient-to-l from-transparent to-white/40" />
             </div>
-            <h2 className="text-3xl md:text-5xl font-light tracking-[0.1em] text-white">
+            <h2 className="text-3xl md:text-5xl font-light tracking-[0.1em] text-white mb-4">
               物語は、ここから
             </h2>
           </div>
 
           <div className="bg-[#0a0a0a] border border-[#222] rounded-2xl p-8 md:p-16 relative overflow-hidden">
-            {/* ノイズ背景 */}
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] pointer-events-none"></div>
 
-            {/* 入力エリア */}
             <div className="relative z-10 mb-16 text-center">
               <label className="block text-[10px] tracking-[0.4em] text-white/50 uppercase mb-4">
                 Theme
@@ -244,7 +252,6 @@ JSON形式のみを出力してください。
               </div>
             </div>
 
-            {/* 結果表示エリア */}
             <div className="relative z-10 min-h-[180px] flex items-center justify-center mb-12">
               {isGenerating ? (
                 <div className="flex flex-col items-center gap-4">
@@ -274,7 +281,6 @@ JSON形式のみを出力してください。
               )}
             </div>
 
-            {/* アクションボタン */}
             <div className="relative z-10 flex justify-center">
               <button
                 onClick={generateWords}
