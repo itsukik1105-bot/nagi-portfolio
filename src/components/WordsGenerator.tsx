@@ -87,31 +87,29 @@ export function WordsGenerator() {
     setDisplayedWords('')
 
     try {
-      const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
+      // .envからGeminiのAPIキーを取得 (余分な空白を除去)
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim()
       
-      // APIキーの詳細なチェック
       if (!apiKey) {
-        throw new Error('APIキー (.env) が見つかりません。')
-      }
-      if (apiKey === 'nagi-portfolio-api-key') {
-        throw new Error('APIキーが初期設定（nagi-portfolio-api-key）のままです。.envファイルを正しいキーに書き換えてください。')
+        throw new Error('APIキー (VITE_GEMINI_API_KEY) が見つかりません。.envファイルを確認してください。')
       }
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true' 
-        },
-        body: JSON.stringify({
-          model: 'claude-3-sonnet-20240229',
-          max_tokens: 600,
-          messages: [
-            {
-              role: 'user',
-              content: `あなたは映像作家・脚本家nagiです。テーマ「${theme}」から、nagiの作風で架空の物語の「タイトル」と「書き出し」を創作してください。
+      // ユーザー指定: gemini-2.5-flash を試行
+      const modelName = 'gemini-2.5-flash'
+      
+      console.log(`Using Gemini Model: ${modelName}`)
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`
+
+      const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `あなたは映像作家・脚本家nagiです。テーマ「${theme}」から、nagiの作風で架空の物語の「タイトル」と「書き出し」を創作してください。
 
 【nagiの世界観】
 - 都会の孤独、深夜の静寂、ガラス越しの視点
@@ -119,55 +117,56 @@ export function WordsGenerator() {
 - 「——」で余韻を残して終わる
 
 【出力形式】
-JSON形式のみを出力してください。
+JSON形式のみを出力してください。余計なマークダウンや解説は不要です。
 {"title": "タイトル", "body": "本文"}`
+              }]
+            }],
+            generationConfig: {
+              responseMimeType: "application/json" 
             }
-          ]
-        })
+          })
       })
 
       if (!response.ok) {
         const errorText = await response.text()
-        let errorMessage = `HTTP Error: ${response.status}`
         
-        // エラー詳細の解析
-        if (response.status === 401) {
-          errorMessage = '認証エラー (401): APIキーが無効です。'
-        } else {
-          try {
-            const errorJson = JSON.parse(errorText)
-            if (errorJson.error && errorJson.error.message) {
-              errorMessage += ` - ${errorJson.error.message}`
-            }
-          } catch {
-            errorMessage += ` - ${errorText}`
-          }
+        // 404エラーの場合、モデル一覧を取得してコンソールに出力する
+        if (response.status === 404) {
+           console.warn(`モデル ${modelName} が見つかりません (404)。利用可能なモデル一覧を取得します...`)
+           try {
+             const listResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`)
+             const listData = await listResponse.json()
+             console.group('Available Gemini Models')
+             console.table(listData.models?.map((m: any) => ({ 
+               name: m.name.replace('models/', ''), 
+               methods: m.supportedGenerationMethods 
+             })))
+             console.groupEnd()
+             console.log('上記リストにあるモデル名を src/components/WordsGenerator.tsx の modelName に設定してください。')
+           } catch (e) {
+             console.error('モデル一覧の取得にも失敗しました:', e)
+           }
         }
-        throw new Error(errorMessage)
+
+        throw new Error(`HTTP Error: ${response.status} (${modelName}) - ${errorText}`)
       }
 
       const data = await response.json()
       
-      // コンテンツ抽出
-      let generatedText = ''
-      if (data.content && Array.isArray(data.content)) {
-        generatedText = data.content
-          .filter((item: any) => item.type === 'text')
-          .map((item: any) => item.text)
-          .join('')
+      const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text
+      
+      if (!generatedText) {
+        throw new Error('生成されたテキストが空でした。')
       }
 
-      // JSON抽出
-      const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
-      const jsonString = jsonMatch ? jsonMatch[0] : generatedText
-
       try {
-        const parsed = JSON.parse(jsonString)
+        const parsed = JSON.parse(generatedText)
         setStory({
           title: parsed.title || '無題',
           body: parsed.body || generatedText
         })
       } catch (e) {
+        console.warn('JSON Parse Warning', e)
         setStory({
           title: '断片',
           body: generatedText.replace(/[\{\}"]/g, '')
@@ -178,8 +177,7 @@ JSON形式のみを出力してください。
       console.error('Generation Error:', error)
       setStory({
         title: 'エラー発生',
-        // エラー内容を画面に表示
-        body: `[SYSTEM ERROR] ${error.message || '不明なエラーが発生しました。'}`
+        body: `[SYSTEM MESSAGE] ${error.message}\n(詳細なエラー原因はブラウザのConsoleを確認してください)`
       })
     } finally {
       setIsGenerating(false)

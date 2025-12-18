@@ -75,7 +75,7 @@ function App() {
           onWorkClick={setSelectedWork} 
         />
         
-        {/* ホーム画面の最後にWordsGeneratorを配置 */}
+        {/* Gemini版 Story Generator */}
         <WordsGenerator />
 
         <Footer siteConfig={siteConfig} />
