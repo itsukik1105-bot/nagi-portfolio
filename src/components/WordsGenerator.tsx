@@ -6,6 +6,43 @@ interface GeneratedStory {
   body: string
 }
 
+// 隠しコマンド（隠しストーリー）の定義
+// キーワードは小文字に変換して判定されるため、ここでのキーは小文字で定義してください
+const HIDDEN_STORIES: Record<string, GeneratedStory> = {
+  "nagi": {
+    title: "観測者",
+    body: "私はカメラを持つ幽霊だ。誰にも気づかれず、世界の隙間を歩く。ファインダー越しにしか世界と触れ合えない、悲しい怪物の独白。それでも私は、シャッターを切ることをやめない。"
+  },
+  "ナギ": {
+    title: "観測者",
+    body: "私はカメラを持つ幽霊だ。誰にも気づかれず、世界の隙間を歩く。ファインダー越しにしか世界と触れ合えない、悲しい怪物の独白。それでも私は、シャッターを切ることをやめない。"
+  },
+  "フィクション": {
+    title: "嘘と夢",
+    body: "全部、夢かもしれない。時々そう考えてぞっとすることがある。私のこの人生も、私のような小説家が描いたものだったりして。それでも良い。お願い、まだ夢を見させて。"
+  },
+  "ユリイカ": {
+    title: "海と月",
+    body: "東京は明るすぎて、逆に見なくていいものまで映っちゃうから。真っ暗な海でしか見えないものがある。それを探すために、僕らはここに来たんだと思う。"
+  },
+  "中古少女": {
+    title: "B面",
+    body: "新品の服は、まだ誰の物語も纏っていない。私が好きなのは、誰かの生活が染み付いた古着。歴史的な必然性を持ちつつ、ミステリとして精巧な、ポール・ドハティのような物語。"
+  },
+  "loveずっきゅん": {
+    title: "ピンク色の狂気",
+    body: "無機質な都市のノイズに紛れ込む、メイド服の少女たち。愛されたいという渇望が、いつしか凶器に変わる。LOVEずっきゅん♡"
+  },
+  "error": {
+    title: "Fatal Error",
+    body: "システム警告: 感情の容量がオーバーフローしています。このリクエストは処理できません。…嘘です。ただ、少し泣きたいだけなんです。"
+  },
+  "404": {
+    title: "Not Found",
+    body: "探しているものは、ここにはありません。あるいは、最初からどこにもなかったのかもしれません。幻影を追いかけるのは、もう終わりにしませんか？"
+  }
+};
+
 export function WordsGenerator() {
   const [theme, setTheme] = useState('')
   const [story, setStory] = useState<GeneratedStory | null>(null)
@@ -19,7 +56,7 @@ export function WordsGenerator() {
   const inputRef = useRef<HTMLInputElement>(null)
   const sectionRef = useRef<HTMLElement>(null)
 
-  // ページ読み込み時にボタンを表示 (スクロール依存を廃止)
+  // ページ読み込み時にボタンを表示
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(true)
@@ -68,13 +105,11 @@ export function WordsGenerator() {
   const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   // 利用するモデルの候補リスト（優先順）
-  // 2025年12月時点で有効なモデルを優先的に配置
   const MODEL_CANDIDATES = [
-    'gemini-2.5-flash',       // 最新版（制限きつめ）
-    'gemini-2.0-flash',       // 安定版（本命）
-    'gemini-2.5-flash-lite',  // 軽量版（制限ゆるめの可能性）
-    'gemini-2.0-flash-lite',  // 旧軽量版
-    'gemini-1.5-flash'        // 旧安定版（廃止の可能性あり）
+    'gemini-2.5-flash',       // 最新版
+    'gemini-2.0-flash',       // 安定版
+    'gemini-2.5-flash-lite',  // 軽量版
+    'gemini-1.5-flash'        // 旧安定版
   ];
 
   const generateWords = async () => {
@@ -86,6 +121,17 @@ export function WordsGenerator() {
     setIsGenerating(true)
     setStory(null)
     setDisplayedWords('')
+
+    // ■ 隠しコマンドの判定
+    const normalizedTheme = theme.trim().toLowerCase();
+    if (HIDDEN_STORIES[normalizedTheme]) {
+      // 生成中の演出（少し待たせることでAIっぽく見せる）
+      await wait(1500);
+      
+      setStory(HIDDEN_STORIES[normalizedTheme]);
+      setIsGenerating(false);
+      return; // APIは呼ばずに終了
+    }
 
     try {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim()
@@ -123,14 +169,13 @@ JSON形式のみを出力してください（マークダウン記法や解説�
       let usedModel = '';
       let lastError = null;
 
-      // モデル候補を順番に試すループ
+      // モデル候補を順番に試すループ (フォールバック機能)
       for (const modelName of MODEL_CANDIDATES) {
-        // console.log(`Trying model: ${modelName}...`); // デバッグ用ログ
+        // console.log(`Trying model: ${modelName}...`);
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
         
-        // リトライロジック
         let attempt = 0;
-        const maxRetries = 1; // 各モデルごとのリトライ回数（短縮）
+        const maxRetries = 1;
 
         while (attempt <= maxRetries) {
           try {
@@ -143,20 +188,18 @@ JSON形式のみを出力してください（マークダウン記法や解説�
               })
             });
 
-            // 成功したらループを抜ける
             if (response.ok) {
               usedModel = modelName;
               break; 
             }
 
-            // 503 (Server Error) なら待機してリトライ
             if (response.status === 503) {
               attempt++;
               if (attempt <= maxRetries) await wait(1000 * attempt);
               continue;
             }
 
-            // 429 (Quota) や 404 (Not Found) なら、このモデルは即座に諦めて次のモデルへ
+            // 429や404なら即座に次のモデルへ
             if (response.status === 429 || response.status === 404) {
               lastError = await response.text();
               break; 
@@ -172,14 +215,11 @@ JSON形式のみを出力してください（マークダウン記法や解説�
           }
         }
 
-        // 成功レスポンスがあれば全ループ終了
         if (response && response.ok) break;
       }
 
-      // すべてのモデルで失敗した場合
       if (!response || !response.ok) {
         console.error('All models failed. Last error:', lastError);
-        // エラー詳細から原因を推測してメッセージを作成
         let errorMsg = '現在、AIサービスが混み合っており応答できません。';
         if (typeof lastError === 'string') {
             if (lastError.includes('429')) errorMsg = '利用上限に達しました。しばらく時間を空けてから再度お試しください。';
@@ -239,7 +279,6 @@ JSON形式のみを出力してください（マークダウン記法や解説�
             : 'opacity-0 translate-y-4 pointer-events-none'
         }`}
       >
-        {/* 白背景・黒文字でコントラストを高め、視認性を向上 */}
         <div className="relative flex items-center gap-3 px-6 py-4 bg-white shadow-[0_0_30px_rgba(255,255,255,0.3)] rounded-full hover:scale-105 transition-all duration-300">
           <span className="relative flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-black opacity-30"></span>
