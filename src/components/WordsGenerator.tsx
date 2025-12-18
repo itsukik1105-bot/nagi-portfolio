@@ -107,12 +107,13 @@ export function WordsGenerator() {
 
   const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // 優先的に試すモデル候補 (Lite版を最優先)
+  // ■ 優先的に試すモデルリスト
+  // スクリーンショットに基づいて「Lite版（制限が緩い）」を最優先に設定
   const PREFERRED_MODELS = [
-    'gemini-2.5-flash-lite', // 制限が緩い
-    'gemini-2.5-flash',      // 最新
-    'gemini-2.0-flash',      // 安定
-    'gemini-1.5-flash'       // 旧安定
+    'gemini-2.5-flash-lite', // 最優先：軽量で制限にかかりにくい
+    'gemini-2.5-flash',      // 次点：最新版
+    'gemini-3-flash',        // 予備：次世代モデル
+    'gemini-2.0-flash'       // 予備：旧安定版
   ];
 
   // API呼び出しのヘルパー関数
@@ -139,14 +140,12 @@ export function WordsGenerator() {
     setStory(null)
     setDisplayedWords('')
 
-    // ■ 隠しコマンドの判定 (小文字化してマッチング)
+    // ■ 隠しコマンドの判定
     const normalizedTheme = theme.trim().toLowerCase();
-    // 完全一致で隠しコマンドを探す（ひらがな/カタカナの違いも吸収したい場合は辞書を拡張）
-    // ここではHIDDEN_STORIESのキーと直接比較、または小文字化したキーと比較
     const hiddenKey = Object.keys(HIDDEN_STORIES).find(key => key.toLowerCase() === normalizedTheme);
     
     if (hiddenKey) {
-      await wait(1500); // 生成演出のための待機
+      await wait(1500); // 生成演出
       setStory(HIDDEN_STORIES[hiddenKey]);
       setIsGenerating(false);
       return; 
@@ -188,10 +187,9 @@ JSON形式のみを出力してください（マークダウン記法不要）�
       let usedModel = '';
       let lastError = '';
 
-      // Phase 1: 優先リストのモデルを順に試す
+      // Phase 1: 優先リスト（Lite版など）を順に試す
       for (const model of PREFERRED_MODELS) {
         try {
-          // console.log(`Trying preferred model: ${model}`);
           response = await callGeminiAPI(model, apiKey, nagiPersona);
           
           if (response.ok) {
@@ -209,7 +207,6 @@ JSON形式のみを出力してください（マークダウン記法不要）�
             }
           }
           
-          // エラー内容を保存して次へ
           lastError = await response.text();
         } catch (e: any) {
           lastError = e.message;
@@ -217,6 +214,7 @@ JSON形式のみを出力してください（マークダウン記法不要）�
       }
 
       // Phase 2: 全滅した場合、APIから「今使えるモデル」一覧を取得して自動選択する
+      // (モデル名変更や廃止に対応するため)
       if (!response || !response.ok) {
         console.warn('Preferred models failed. Fetching dynamic model list...');
         try {
@@ -231,16 +229,15 @@ JSON形式のみを出力してください（マークダウン記法不要）�
 
             console.log('Available models from API:', availableModels);
 
-            // Flash系を優先してソート
+            // "lite" や "flash" がつくモデルを優先してソート
             const autoCandidates = availableModels.sort((a: string, b: string) => {
-              if (a.includes('flash') && !b.includes('flash')) return -1;
-              if (!a.includes('flash') && b.includes('flash')) return 1;
-              return 0;
+              const aScore = (a.includes('lite') ? 2 : 0) + (a.includes('flash') ? 1 : 0);
+              const bScore = (b.includes('lite') ? 2 : 0) + (b.includes('flash') ? 1 : 0);
+              return bScore - aScore;
             });
 
             // 自動検出したモデルで再トライ
             for (const model of autoCandidates) {
-              // console.log(`Auto-trying model: ${model}`);
               response = await callGeminiAPI(model, apiKey, nagiPersona);
               if (response.ok) {
                 usedModel = model;
@@ -254,7 +251,6 @@ JSON形式のみを出力してください（マークダウン記法不要）�
       }
 
       if (!response || !response.ok) {
-        // エラーメッセージの整形
         let errorMsg = 'AIモデルの接続に失敗しました。';
         if (lastError.includes('429')) errorMsg = '利用制限(Quota)に達しました。しばらく時間を空けてから再度お試しください。';
         else if (lastError.includes('404')) errorMsg = '利用可能なAIモデルが見つかりませんでした。';
