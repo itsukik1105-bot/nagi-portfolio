@@ -1,12 +1,11 @@
 import { useEffect } from 'react'
 
 /**
- * 画像コンテンツ保護フック
- * - 画像の右クリック無効化
- * - 画像の長押し無効化（モバイル）
- * - 画像ドラッグ無効化
+ * コンテンツ保護フック
+ * - 画像の右クリック・長押し・ドラッグ無効化
+ * - テキスト選択無効化（連絡先は除外）
  * 
- * ※テキスト選択や通常のリンク右クリックは有効のまま（UIUX維持）
+ * ※ .selectable クラスを持つ要素は選択可能
  */
 export function useContentProtection() {
   useEffect(() => {
@@ -28,14 +27,41 @@ export function useContentProtection() {
       }
     }
 
-    // モバイルの長押し保存防止CSS（画像・動画のみ）
+    // コンテンツ保護CSS
     const style = document.createElement('style')
     style.id = 'content-protection-style'
     style.textContent = `
+      /* 画像・動画の保護 */
       img, video {
         -webkit-touch-callout: none;
         -webkit-user-select: none;
         user-select: none;
+        pointer-events: auto;
+      }
+      
+      /* テキスト選択無効化（全体） */
+      body {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+      
+      /* 選択可能にする要素（連絡先など） */
+      .selectable,
+      .selectable * {
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
+        user-select: text !important;
+      }
+      
+      /* input, textareaは常に選択可能 */
+      input, textarea {
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
+        user-select: text !important;
       }
     `
     document.head.appendChild(style)

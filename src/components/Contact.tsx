@@ -92,7 +92,7 @@ export function Contact({ onBack }: ContactProps) {
                 </Button>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-12">
+              <form onSubmit={handleSubmit} className="space-y-12 selectable">
                 
                 {/* Name */}
                 <div className="group">

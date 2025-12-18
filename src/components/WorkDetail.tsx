@@ -202,6 +202,84 @@ function GalleryImage({
   )
 }
 
+// 作品詳細セクションコンポーネント（スクロール連動アニメーション）
+function DetailSection({ 
+  label, 
+  children, 
+  delay = 0,
+  isHighlight = false 
+}: { 
+  label: string
+  children: React.ReactNode
+  delay?: number
+  isHighlight?: boolean
+}) {
+  const sectionRef = useRef<HTMLDivElement>(null)
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    const element = sectionRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          // 一度表示されたら維持（stagger用にdelayを追加）
+          setTimeout(() => {
+            setIsVisible(true)
+          }, delay * 100)
+        }
+      },
+      {
+        threshold: 0.2,
+        rootMargin: '0px 0px -10% 0px',
+      }
+    )
+
+    observer.observe(element)
+    return () => observer.unobserve(element)
+  }, [delay])
+
+  return (
+    <div 
+      ref={sectionRef}
+      className={`grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12 transition-all duration-700 ease-out
+        ${isVisible 
+          ? 'opacity-100 translate-y-0' 
+          : 'opacity-0 translate-y-8'
+        }
+      `}
+    >
+      {/* ラベル（アンダーライン付き） */}
+      <div className="md:col-span-3">
+        <div className="inline-block">
+          <h2 className={`text-xs uppercase tracking-[0.2em] transition-colors duration-500
+            ${isVisible ? 'text-[#666]' : 'text-[#444]'}
+          `}>
+            {label}
+          </h2>
+          {/* アンダーライン */}
+          <div 
+            className={`h-[1px] bg-[#444] mt-2 transition-all duration-700 ease-out origin-left
+              ${isVisible ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'}
+            `}
+            style={{ transitionDelay: isVisible ? '0.2s' : '0s' }}
+          />
+        </div>
+      </div>
+      
+      {/* コンテンツ */}
+      <div className="md:col-span-9">
+        <p className={`text-base md:text-lg leading-[2.0] font-light whitespace-pre-wrap transition-colors duration-500
+          ${isHighlight ? 'text-white font-normal' : 'text-[#ccc]'}
+        `}>
+          {children}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function WorkDetail({ work, onBack }: WorkDetailProps) {
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(false)
 
@@ -295,64 +373,36 @@ export function WorkDetail({ work, onBack }: WorkDetailProps) {
           </div>
         )}
 
-        {/* 作品詳細エリア（4段構成） */}
+        {/* 作品詳細エリア（4段構成・スクロールアニメーション） */}
         {(work.about || work.concept || work.process || work.client) && (
-          <div className="space-y-16 md:space-y-20 mb-40 fade-in-up" style={{ animationDelay: '0.4s' }}>
+          <div className="space-y-16 md:space-y-24 mb-40">
             
             {/* About */}
             {work.about && (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
-                <div className="md:col-span-3">
-                  <h2 className="text-xs text-[#555] uppercase tracking-[0.2em]">About</h2>
-                </div>
-                <div className="md:col-span-9">
-                  <p className="text-base md:text-lg leading-[2.0] text-[#ccc] font-light whitespace-pre-wrap">
-                    {work.about}
-                  </p>
-                </div>
-              </div>
+              <DetailSection label="About" delay={0}>
+                {work.about}
+              </DetailSection>
             )}
 
             {/* Concept */}
             {work.concept && (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
-                <div className="md:col-span-3">
-                  <h2 className="text-xs text-[#555] uppercase tracking-[0.2em]">Concept</h2>
-                </div>
-                <div className="md:col-span-9">
-                  <p className="text-base md:text-lg leading-[2.0] text-[#ccc] font-light whitespace-pre-wrap">
-                    {work.concept}
-                  </p>
-                </div>
-              </div>
+              <DetailSection label="Concept" delay={1}>
+                {work.concept}
+              </DetailSection>
             )}
 
             {/* Process（空欄なら非表示） */}
             {work.process && (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
-                <div className="md:col-span-3">
-                  <h2 className="text-xs text-[#555] uppercase tracking-[0.2em]">Process</h2>
-                </div>
-                <div className="md:col-span-9">
-                  <p className="text-base md:text-lg leading-[2.0] text-[#ccc] font-light whitespace-pre-wrap">
-                    {work.process}
-                  </p>
-                </div>
-              </div>
+              <DetailSection label="Process" delay={2}>
+                {work.process}
+              </DetailSection>
             )}
 
             {/* Client（空欄なら非表示） */}
             {work.client && (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
-                <div className="md:col-span-3">
-                  <h2 className="text-xs text-[#555] uppercase tracking-[0.2em]">Client</h2>
-                </div>
-                <div className="md:col-span-9">
-                  <p className="text-base md:text-lg leading-[2.0] text-white font-normal">
-                    {work.client}
-                  </p>
-                </div>
-              </div>
+              <DetailSection label="Client" delay={3} isHighlight>
+                {work.client}
+              </DetailSection>
             )}
 
           </div>
