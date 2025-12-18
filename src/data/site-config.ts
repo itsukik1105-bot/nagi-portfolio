@@ -24,7 +24,7 @@ export const siteConfig = {
     subtitle: "Director & Editor", // 肩書き
     
     // プロフィール画像
-    profileImage: "https://storage.googleapis.com/studio-design-asset-files/projects/bXqzDJDpWD/s-623x830_v-fs_webp_0a39e6e8-02c9-4d41-ae2e-7165a4d57202.jpg",
+    profileImage: "https://storage.googleapis.com/studio-design-asset-files/projects/bXqzDJDpWD/s-727x969_v-fs_webp_4c394dcb-3e20-423d-844c-47fd431f78ab.jpg",
 
     // 【重要】3段構成に合わせて文章を3つの要素に整理しました
     bio: [

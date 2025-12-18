@@ -48,7 +48,7 @@ function PlayButton({ onClick, isExternal = false }: { onClick: () => void; isEx
 }
 
 // 動画プレーヤーコンポーネント（サムネイル + PLAYボタン → 再生）
-function VideoPlayer({ work }: { work: Work }) {
+function VideoPlayer({ work, hasGallery }: { work: Work; hasGallery: boolean }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -79,7 +79,7 @@ function VideoPlayer({ work }: { work: Work }) {
   }
 
   return (
-    <div className="relative w-full aspect-video bg-[#0a0a0a] overflow-hidden group">
+    <div className={`relative w-full ${hasGallery ? 'aspect-[4/3]' : 'aspect-video'} bg-[#0a0a0a] overflow-hidden group`}>
       {/* 再生前：サムネイル + PLAYボタン */}
       {!isPlaying && (
         <>
@@ -272,16 +272,9 @@ export function WorkDetail({ work, onBack }: WorkDetailProps) {
           </div>
         </div>
 
-        {/* 動画エリア（統一PLAYボタンUI） */}
-        {hasAnyVideo && (
-          <div className="relative w-full mb-16 md:mb-32 fade-in-up" style={{ animationDelay: '0.2s' }}>
-            <VideoPlayer work={work} />
-          </div>
-        )}
-
         {/* ギャラリーエリア */}
         {galleryImages.length > 0 && (
-          <div className="mb-16 md:mb-32 fade-in-up" style={{ animationDelay: '0.3s' }}>
+          <div className="mb-16 md:mb-32 fade-in-up" style={{ animationDelay: '0.2s' }}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-24">
               {galleryImages.map((imageUrl, index) => (
                 <GalleryImage
@@ -292,6 +285,13 @@ export function WorkDetail({ work, onBack }: WorkDetailProps) {
                 />
               ))}
             </div>
+          </div>
+        )}
+
+        {/* 動画エリア（統一PLAYボタンUI） */}
+        {hasAnyVideo && (
+          <div className={`relative w-full mb-16 md:mb-32 fade-in-up ${galleryImages.length > 0 ? 'md:w-1/2' : ''}`} style={{ animationDelay: galleryImages.length > 0 ? '0.3s' : '0.2s' }}>
+            <VideoPlayer work={work} hasGallery={galleryImages.length > 0} />
           </div>
         )}
 
