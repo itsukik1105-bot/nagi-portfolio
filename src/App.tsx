@@ -8,6 +8,7 @@ import { CustomCursor } from './components/CustomCursor'
 import { OpeningLoading } from './components/OpeningLoading'
 import { Contact } from './components/Contact'
 import { WordsGenerator } from './components/WordsGenerator'
+import { Footer } from './components/Footer'
 import { siteConfig } from './data/site-config'
 import { fetchWorks } from './utils/fetchWorks'
 import { type Work } from './data/works'
@@ -19,7 +20,7 @@ function App() {
   const [isContactOpen, setIsContactOpen] = useState(false)
   const [works, setWorks] = useState<Work[]>([])
 
-  // 画像・動画の保護（右クリック・長押し・ドラッグ無効化）
+  // 画像・動画の保護
   useContentProtection()
 
   // Google Fonts読み込み
@@ -33,11 +34,11 @@ function App() {
     }
   }, [])
 
-  useState(() => {
+  useEffect(() => {
     fetchWorks().then((data) => {
       setWorks(data)
     })
-  })
+  }, [])
 
   const handleBackToHome = () => {
     setSelectedWork(null)
@@ -74,9 +75,10 @@ function App() {
           onWorkClick={setSelectedWork} 
         />
         
-        <footer className="py-20 px-6 text-center text-[#444] text-xs tracking-widest bg-black border-t border-[#111]">
-          <p>&copy; {new Date().getFullYear()} {siteConfig.siteName.toUpperCase()}.</p>
-        </footer>
+        {/* ホーム画面の最後にWordsGeneratorを配置 */}
+        <WordsGenerator />
+
+        <Footer siteConfig={siteConfig} />
       </>
     )
   }
@@ -85,7 +87,7 @@ function App() {
     <div className="min-h-screen text-[#f0f0f0] font-sans selection:bg-white selection:text-black bg-black relative cursor-none">
       <OpeningLoading />
       <CustomCursor />
-      <WordsGenerator />
+      
       <style>{`
         /* フォント設定 */
         * {

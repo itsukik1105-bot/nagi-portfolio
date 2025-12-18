@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X } from 'lucide-react'
+import { ArrowDown } from 'lucide-react'
 
 interface GeneratedStory {
   title: string
@@ -7,39 +7,39 @@ interface GeneratedStory {
 }
 
 export function WordsGenerator() {
-  const [isVisible, setIsVisible] = useState(false)
-  const [isOpen, setIsOpen] = useState(false)
   const [theme, setTheme] = useState('')
   const [story, setStory] = useState<GeneratedStory | null>(null)
   const [displayedWords, setDisplayedWords] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const sectionRef = useRef<HTMLElement>(null)
 
-  // スクロールでフローティングボタン表示
+  // スクロール検知（フローティングボタンの表示制御）
   useEffect(() => {
     const handleScroll = () => {
+      if (!sectionRef.current) return
+      
       const scrollY = window.scrollY
       const windowHeight = window.innerHeight
-      setIsVisible(scrollY > windowHeight * 0.5)
+      const sectionTop = sectionRef.current.offsetTop
+
+      // ジェネレーターが表示領域に入ったらボタンを消す
+      const isSectionInView = scrollY + windowHeight > sectionTop + 100
+      
+      // ある程度スクロールしたら表示、ただしセクションが見えてきたら消す
+      if (isSectionInView) {
+        setIsVisible(false)
+      } else {
+        setIsVisible(scrollY > 300)
+      }
     }
 
     window.addEventListener('scroll', handleScroll)
     handleScroll()
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
-
-  // モーダル開閉時のbody scroll制御
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [isOpen])
 
   // タイプライター効果
   useEffect(() => {
@@ -51,12 +51,18 @@ export function WordsGenerator() {
     setIsTyping(true)
     setDisplayedWords('')
     
+    // 文字列を配列に分解（サロゲートペア対応）
+    const text = story.body || ''
+    const chars = Array.from(text)
     let index = 0
-    const chars = [...story.body]
     
     const timer = setInterval(() => {
       if (index < chars.length) {
-        setDisplayedWords(prev => prev + chars[index])
+        // undefinedチェックを追加して確実に文字を追加
+        const char = chars[index]
+        if (char !== undefined) {
+          setDisplayedWords(prev => prev + char)
+        }
         index++
       } else {
         clearInterval(timer)
@@ -66,6 +72,14 @@ export function WordsGenerator() {
 
     return () => clearInterval(timer)
   }, [story, isGenerating])
+
+  const scrollToGenerator = () => {
+    sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    // スクロール後にフォーカス
+    setTimeout(() => {
+      inputRef.current?.focus()
+    }, 800)
+  }
 
   const generateWords = async () => {
     if (!theme.trim()) {
@@ -78,103 +92,82 @@ export function WordsGenerator() {
     setDisplayedWords('')
 
     try {
+      // APIキーのチェック
+      const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
+      
+      if (!apiKey) {
+        throw new Error('API Key is missing')
+      }
+
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true' 
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-3-sonnet-20240229',
           max_tokens: 600,
           messages: [
             {
               role: 'user',
-              content: `あなたは映像作家・脚本家nagiです。与えられたテーマから、nagiの作風で架空の物語の「タイトル」と「書き出し」を創作してください。
+              content: `あなたは映像作家・脚本家nagiです。テーマ「${theme}」から、nagiの作風で架空の物語の「タイトル」と「書き出し」を創作してください。
 
-【nagiの代表作と世界観】
-- 『ユリイカ』: 東京で生き急ぐカメラマンの青年と、南九州での過去の記憶。「何も映ってない」写真、見ること/見られることの構造。
-- 『中古少女』: 東京という街を「新品」と「中古」で分ける視点。自己価値と他者からの承認。
-- 『フィクション』: 夢と現実の境界が曖昧になる感覚。「夢かもしれない、全部」という不安。
-- 『LOVEずっきゅん』: 妄想世界と現実世界の交錯。「空っぽのお人形さんみたい」な虚無感。
-
-【nagiのタイトルの特徴】
-- 短い（2〜6文字程度）
-- カタカナ、ひらがな、漢字、英語のいずれか、または組み合わせ
-- 抽象的、象徴的、詩的
-- どこか寂しさや孤独感、または皮肉を感じさせる
-- 例: 「ユリイカ」「中古少女」「フィクション」「LOVEずっきゅん」「残像」「透明人間」「夜行性」「空白の住人」
-
-【nagiの文体の特徴】
-- 具体的な時刻や場所から始める（「午前2時」「窓の外」「駅のホーム」）
-- 五感の描写を入れる（光、音、温度、匂い）
-- 主人公の内面へ静かに沈んでいく
-- 短い文と長い文のリズム
+【nagiの世界観】
+- 都会の孤独、深夜の静寂、ガラス越しの視点
+- 抽象的で詩的な表現
 - 「——」で余韻を残して終わる
 
-【nagiの頻出モチーフ】
-- カメラ、ファインダー、写真、シャッター
-- 窓、ガラス、反射、映り込み
-- 電車、線路、ホーム、終電
-- 夜の街、ネオン、信号の光
-- 鏡、化粧、仮面、ペルソナ
-- 空っぽ、中古、二番目
-
-【nagiの代表的なフレーズ（参考）】
-- 「この東京という街に生きる人間は大きく分けて二つ。『新品』か『中古』かだ」
-- 「ここは東京。この街では、止まることは死ぬことだと誰かが言った」
-- 「なんていうか、『何も映ってない』んだよね」
-- 「真っ暗だから、ちゃんと『見ようとしない』と見えない」
-- 「綺麗に撮ろうとすると、大事なものが映らなくなったりするでしょう」
-- 「夢かもしれない、全部。時々そう考えてぞっとすることがある」
-- 「空っぽのお人形さんみたい」
-- 「被写体がそこにいるのに、その人が見えてこない」
-
-【テーマ】
-${theme}
-
 【出力形式】
-以下の形式で、JSONのみを出力してください。説明や前置きは不要です。
-{"title": "作品タイトル", "body": "物語の書き出し本文（3〜5文、最後は——で終わる）"}
-
-【ルール】
-- タイトルは2〜6文字程度、nagiらしい象徴的なもの
-- 本文は物語の「書き出し」部分のみ（3〜5文程度）
-- 主人公は「私」または「彼/彼女」
-- 具体的な情景から始める（時間、場所、五感）
-- テーマを直接言わず、空気感で表現する
-- 最後は「——」で終わり、続きを想像させる
-
-では、テーマ「${theme}」から物語を紡いでください。`
+JSON形式のみを出力してください。
+{"title": "タイトル", "body": "本文"}`
             }
           ]
         })
       })
 
-      const data = await response.json()
-      const generatedText = data.content
-        ?.map((item: any) => (item.type === 'text' ? item.text : ''))
-        .join('')
-        .trim()
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error?.message || 'API Request Failed')
+      }
 
-      // JSONをパース
+      const data = await response.json()
+      
+      // コンテンツの抽出
+      let generatedText = ''
+      if (data.content && Array.isArray(data.content)) {
+        generatedText = data.content
+          .filter((item: any) => item.type === 'text')
+          .map((item: any) => item.text)
+          .join('')
+      }
+
+      // JSONの抽出（Markdown記法が含まれる場合に対応）
+      const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
+      const jsonString = jsonMatch ? jsonMatch[0] : generatedText
+
       try {
-        const parsed = JSON.parse(generatedText)
+        const parsed = JSON.parse(jsonString)
         setStory({
           title: parsed.title || '無題',
-          body: parsed.body || '言葉が降りてこない夜もある。それでも私は、白い画面を見つめ続けていた——'
+          body: parsed.body || generatedText
         })
-      } catch {
-        // JSONパースに失敗した場合はテキストをそのまま使用
+      } catch (e) {
+        // JSONパース失敗時はテキストをそのまま本文として扱う
         setStory({
           title: '断片',
-          body: generatedText || '言葉が降りてこない夜もある。それでも私は、白い画面を見つめ続けていた——'
+          body: generatedText
         })
       }
+
     } catch (error) {
       console.error('Generation error:', error)
+      // エラー時のフォールバック
       setStory({
-        title: '沈黙',
-        body: '言葉が降りてこない夜もある。それでも私は、白い画面を見つめ続けていた——'
+        title: '接続エラー',
+        body: '言葉が降りてこない夜もある。APIキーの設定を確認してください——'
       })
     } finally {
       setIsGenerating(false)
@@ -187,161 +180,131 @@ ${theme}
     }
   }
 
-  const handleClose = () => {
-    setIsOpen(false)
-    setStory(null)
-    setDisplayedWords('')
-    setTheme('')
-  }
-
   return (
     <>
-      {/* フローティングボタン */}
+      {/* フローティングボタン（スクロール用） */}
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={scrollToGenerator}
         className={`fixed bottom-8 right-8 z-40 group transition-all duration-700 ${
-          isVisible && !isOpen 
+          isVisible 
             ? 'opacity-100 translate-y-0' 
             : 'opacity-0 translate-y-4 pointer-events-none'
         }`}
       >
         <div className="relative flex items-center gap-3 px-5 py-3 bg-[#1a1a1a] backdrop-blur-sm border border-[#666] rounded-full hover:border-white hover:bg-[#222] transition-all duration-500">
-          {/* 点滅するドット */}
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
           </span>
-          <span className="text-[12px] tracking-[0.15em] text-white font-medium">
-            Story
+          <span className="text-[12px] tracking-[0.15em] text-white font-medium flex items-center gap-2">
+            Story <ArrowDown className="w-3 h-3" />
           </span>
         </div>
       </button>
 
-      {/* モーダル */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* 背景オーバーレイ */}
-          <div 
-            className="absolute inset-0 bg-black/98 backdrop-blur-sm animate-fade-in"
-            onClick={handleClose}
-          />
+      {/* ジェネレーターセクション（ページ下部に配置） */}
+      <section 
+        id="words-generator" 
+        ref={sectionRef}
+        className="py-32 px-6 bg-black border-t border-[#111] relative z-20"
+      >
+        <div className="max-w-[900px] mx-auto">
           
-          {/* モーダルコンテンツ */}
-          <div className="relative w-full max-w-[900px] max-h-[90vh] overflow-y-auto mx-4 animate-modal-in">
-            
-            {/* 閉じるボタン */}
-            <button
-              onClick={handleClose}
-              className="absolute top-4 right-4 md:top-8 md:right-8 z-10 w-10 h-10 flex items-center justify-center text-white/60 hover:text-white transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
+          <div className="text-center mb-16">
+            <div className="flex items-center justify-center gap-6 mb-6">
+              <div className="w-12 md:w-20 h-px bg-gradient-to-r from-transparent to-white/40" />
+              <span className="text-[11px] tracking-[0.5em] text-white/70 uppercase font-medium">Story Generator</span>
+              <div className="w-12 md:w-20 h-px bg-gradient-to-l from-transparent to-white/40" />
+            </div>
+            <h2 className="text-3xl md:text-5xl font-light tracking-[0.1em] text-white">
+              物語は、ここから
+            </h2>
+          </div>
 
-            <div className="px-6 py-16 md:py-24">
-              {/* ヘッダー */}
-              <div className="text-center mb-16">
-                <div className="flex items-center justify-center gap-6 mb-6">
-                  <div className="w-12 md:w-20 h-px bg-gradient-to-r from-transparent to-white/40" />
-                  <span className="text-[11px] tracking-[0.5em] text-white/70 uppercase font-medium">Story Generator</span>
-                  <div className="w-12 md:w-20 h-px bg-gradient-to-l from-transparent to-white/40" />
-                </div>
-                <h2 className="text-3xl md:text-5xl font-light tracking-[0.1em] text-white">
-                  物語は、ここから
-                </h2>
-              </div>
+          <div className="bg-[#0a0a0a] border border-[#222] rounded-2xl p-8 md:p-16 relative overflow-hidden">
+            {/* ノイズ背景 */}
+            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] pointer-events-none"></div>
 
-              {/* テーマ入力エリア */}
-              <div className="mb-20">
-                <label className="block text-[11px] tracking-[0.4em] text-white/70 uppercase mb-5 text-center font-medium">
-                  Theme
-                </label>
-                <div className="relative max-w-[500px] mx-auto">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={theme}
-                    onChange={(e) => setTheme(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="雨、別れ、夜明け、嘘、再会、窓..."
-                    className="w-full bg-transparent border-b-2 border-white/30 focus:border-white py-5 text-center text-xl md:text-2xl text-white placeholder:text-white/30 focus:outline-none transition-all duration-500 tracking-wider selectable"
-                    disabled={isGenerating}
-                    autoFocus
-                  />
-                </div>
-              </div>
-
-              {/* 物語の表示エリア */}
-              <div className="min-h-[220px] flex items-center justify-center mb-16 px-4">
-                {isGenerating ? (
-                  <div className="flex flex-col items-center gap-6">
-                    <div className="flex gap-2">
-                      <span className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
-                      <span className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
-                      <span className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '400ms' }} />
-                    </div>
-                    <span className="text-base tracking-[0.3em] text-white/80">物語を紡いでいます</span>
-                  </div>
-                ) : story ? (
-                  <div className="max-w-[700px]">
-                    {/* 本文 + タイトル */}
-                    <p className="text-lg md:text-xl leading-[2.4] text-white/90 font-light whitespace-pre-wrap">
-                      {displayedWords}
-                      {isTyping && <span className="inline-block w-[2px] h-[1em] bg-white ml-1 animate-blink align-middle" />}
-                      {!isTyping && story.title && (
-                        <span className="text-white/50">『{story.title}』</span>
-                      )}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <p className="text-base text-white/50 tracking-wider leading-relaxed">
-                      テーマを入力して<br className="md:hidden" />物語の書き出しを紡いでください
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* 紡ぐボタン */}
-              <div className="flex justify-center">
-                <button
-                  onClick={generateWords}
-                  disabled={isGenerating || !theme.trim()}
-                  className="group relative px-14 py-5 rounded-full border-2 border-white/50 hover:border-white hover:bg-white/10 transition-all duration-500 disabled:opacity-30 disabled:cursor-not-allowed overflow-hidden"
-                >
-                  <span className="relative text-base tracking-[0.25em] text-white font-medium">
-                    {isGenerating ? '紡いでいます...' : '紡ぐ'}
-                  </span>
-                </button>
+            {/* 入力エリア */}
+            <div className="relative z-10 mb-16 text-center">
+              <label className="block text-[10px] tracking-[0.4em] text-white/50 uppercase mb-4">
+                Theme
+              </label>
+              <div className="relative max-w-[400px] mx-auto">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="雨、別れ、夜明け..."
+                  className="w-full bg-transparent border-b border-[#333] focus:border-white py-3 text-center text-lg text-white placeholder:text-[#333] focus:outline-none transition-all duration-500 tracking-wider"
+                  disabled={isGenerating}
+                />
               </div>
             </div>
 
+            {/* 結果表示エリア */}
+            <div className="relative z-10 min-h-[180px] flex items-center justify-center mb-12">
+              {isGenerating ? (
+                <div className="flex flex-col items-center gap-4">
+                  <div className="flex gap-2">
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '400ms' }} />
+                  </div>
+                  <span className="text-xs tracking-[0.2em] text-white/50">紡いでいます...</span>
+                </div>
+              ) : story ? (
+                <div className="max-w-[600px] text-center">
+                  <p className="text-base md:text-lg leading-[2.4] text-white/90 font-light whitespace-pre-wrap mb-4">
+                    {displayedWords}
+                    {isTyping && <span className="inline-block w-[1.5px] h-[1em] bg-white ml-1 animate-blink align-middle" />}
+                  </p>
+                  {!isTyping && story.title && (
+                    <div className="text-xs tracking-[0.2em] text-white/40 mt-6 fade-in">
+                      —— 『{story.title}』
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-[#333] tracking-widest text-center">
+                  Enter a theme to generate a story.
+                </p>
+              )}
+            </div>
+
+            {/* アクションボタン */}
+            <div className="relative z-10 flex justify-center">
+              <button
+                onClick={generateWords}
+                disabled={isGenerating || !theme.trim()}
+                className="group relative px-10 py-3 rounded-full border border-[#333] hover:border-white hover:bg-white/5 transition-all duration-500 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <span className="text-xs tracking-[0.2em] text-white">
+                  {isGenerating ? 'GENERATING' : 'GENERATE'}
+                </span>
+              </button>
+            </div>
           </div>
+
         </div>
-      )}
+      </section>
 
       <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .animate-fade-in {
-          animation: fadeIn 0.3s ease-out forwards;
-        }
-        
-        @keyframes modalIn {
-          from { opacity: 0; transform: scale(0.95) translateY(20px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        .animate-modal-in {
-          animation: modalIn 0.4s ease-out forwards;
-        }
-        
         @keyframes blink {
           0%, 50% { opacity: 1; }
           51%, 100% { opacity: 0; }
         }
         .animate-blink {
           animation: blink 0.8s infinite;
+        }
+        .fade-in {
+          animation: fadeIn 1s ease-out forwards;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
       `}</style>
     </>
