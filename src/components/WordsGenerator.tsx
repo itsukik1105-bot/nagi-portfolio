@@ -7,7 +7,6 @@ interface GeneratedStory {
 }
 
 // 隠しコマンド（隠しストーリー）の定義
-// キーワードは小文字に変換して判定されるため、ここでのキーは小文字で定義してください
 const HIDDEN_STORIES: Record<string, GeneratedStory> = {
   "フィクション": {
     title: "嘘と夢",
@@ -21,19 +20,11 @@ const HIDDEN_STORIES: Record<string, GeneratedStory> = {
     title: "B面",
     body: "新品の服は、まだ誰の物語も纏っていない。私が好きなのは、誰かの生活が染み付いた古着。歴史的な必然性を持ちつつ、ミステリとして精巧な、ポール・ドハティのような物語。"
   },
-  "LOVE♡ずっきゅん": {
-    title: "ピンク色の狂気",
-    body: "無機質な都市のノイズに紛れ込む、メイド服の少女たち。愛されたいという渇望が、いつしか凶器に変わる。LOVEずっきゅん♡"
-  },
-  "LOVEずっきゅん": {
+  "love♡ずっきゅん": {
     title: "ピンク色の狂気",
     body: "無機質な都市のノイズに紛れ込む、メイド服の少女たち。愛されたいという渇望が、いつしか凶器に変わる。LOVEずっきゅん♡"
   },
   "loveずっきゅん": {
-    title: "ピンク色の狂気",
-    body: "無機質な都市のノイズに紛れ込む、メイド服の少女たち。愛されたいという渇望が、いつしか凶器に変わる。LOVEずっきゅん♡"
-  },
-  "LOVEズッキュン": {
     title: "ピンク色の狂気",
     body: "無機質な都市のノイズに紛れ込む、メイド服の少女たち。愛されたいという渇望が、いつしか凶器に変わる。LOVEずっきゅん♡"
   },
@@ -66,13 +57,11 @@ export function WordsGenerator() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
   
-  // ページロード後、少ししてからボタンを表示するフラグ
   const [isVisible, setIsVisible] = useState(false)
   
   const inputRef = useRef<HTMLInputElement>(null)
   const sectionRef = useRef<HTMLElement>(null)
 
-  // ページ読み込み時にボタンを表示
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(true)
@@ -80,7 +69,6 @@ export function WordsGenerator() {
     return () => clearTimeout(timer)
   }, [])
 
-  // タイプライター効果
   useEffect(() => {
     if (!story || isGenerating) {
       setDisplayedWords('')
@@ -117,16 +105,29 @@ export function WordsGenerator() {
     }, 800)
   }
 
-  // 指定ミリ秒待機するヘルパー関数
   const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // 利用するモデルの候補リスト（優先順）
-  const MODEL_CANDIDATES = [
-    'gemini-2.5-flash',       // 最新版
-    'gemini-2.0-flash',       // 安定版
-    'gemini-2.5-flash-lite',  // 軽量版
-    'gemini-1.5-flash'        // 旧安定版
+  // 優先的に試すモデル候補 (Lite版を最優先)
+  const PREFERRED_MODELS = [
+    'gemini-2.5-flash-lite', // 制限が緩い
+    'gemini-2.5-flash',      // 最新
+    'gemini-2.0-flash',      // 安定
+    'gemini-1.5-flash'       // 旧安定
   ];
+
+  // API呼び出しのヘルパー関数
+  const callGeminiAPI = async (modelName: string, apiKey: string, prompt: string) => {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: "application/json" }
+      })
+    });
+    return response;
+  };
 
   const generateWords = async () => {
     if (!theme.trim()) {
@@ -138,15 +139,17 @@ export function WordsGenerator() {
     setStory(null)
     setDisplayedWords('')
 
-    // ■ 隠しコマンドの判定
+    // ■ 隠しコマンドの判定 (小文字化してマッチング)
     const normalizedTheme = theme.trim().toLowerCase();
-    if (HIDDEN_STORIES[normalizedTheme]) {
-      // 生成中の演出（少し待たせることでAIっぽく見せる）
-      await wait(1500);
-      
-      setStory(HIDDEN_STORIES[normalizedTheme]);
+    // 完全一致で隠しコマンドを探す（ひらがな/カタカナの違いも吸収したい場合は辞書を拡張）
+    // ここではHIDDEN_STORIESのキーと直接比較、または小文字化したキーと比較
+    const hiddenKey = Object.keys(HIDDEN_STORIES).find(key => key.toLowerCase() === normalizedTheme);
+    
+    if (hiddenKey) {
+      await wait(1500); // 生成演出のための待機
+      setStory(HIDDEN_STORIES[hiddenKey]);
       setIsGenerating(false);
-      return; // APIは呼ばずに終了
+      return; 
     }
 
     try {
@@ -160,88 +163,104 @@ export function WordsGenerator() {
 あなたは映像作家・脚本家「nagi」として、テーマ「${theme}」から架空の物語の冒頭（タイトル＋本文100字程度）を創作してください。行や段落は適宜改行し、読みやすくしてください。
 過去作のキャラクターや職業設定（カメラマン、メイド、小説家など）をそのまま使うのではなく、以下の「nagi的エッセンス」を抽出して、全く新しい情景を描いてください。
 
-【nagi的エッセンス（抽象的定義）】
-1. **監督・脚本家としての視点と距離感**
+【nagi的エッセンス】
+1. **視点と距離感**
    - 世界を何か一枚越しに見ているような、どこか冷めた、しかし対象への愛着を捨てきれない視点。
-   - 「マジョリティ・社会的な成功」に対する違和感と、「マイノリティ・忘れ去られたもの」への共感。
-   - 都会の喧騒の中にふと訪れる「真空」のような静寂の瞬間を切り取る。
+   - 「マジョリティ」に対する違和感と、「マイノリティ」への共感。
+   - 都会の喧騒の中にふと訪れる「真空」のような静寂の瞬間。
 
 2. **文体とリズム**
-   - 説明的な文章ではなく、映像のカット割りを想起させるリズム感。
-   - 独白（モノローグ）は、誰かに語りかけるようでいて、自分自身に言い聞かせているような内省的なトーン。
-   - 温度、湿度、光の粒子、音の響きなど、「感覚」に訴える描写を重視する（例：夏の湿った熱気、冬の乾いた空気、氷が溶ける音）。
+   - 映像のカット割りを想起させるリズム感。
+   - 独白（モノローグ）は、自分自身に言い聞かせているような内省的なトーン。
+   - 温度、湿度、光の粒子、音の響きなど、「感覚」に訴える描写。
 
 3. **物語の核**
-   - 「現実」と「虚構（あるいは妄想・夢）」の境界線が曖昧になる瞬間。
-   - 誰か（大切な存在、あるいは過去の自分）の「不在」が、逆にその存在を強く感じさせるような喪失感。
-   - ラストは劇的な解決ではなく、ふっと息を吐くような、あるいはその時を閉じ込めるような、静かな余韻（体言止めや「——」の使用）で閉じること。
+   - 「現実」と「虚構」の境界線が曖昧になる瞬間。
+   - 誰かの「不在」が、逆にその存在を強く感じさせるような喪失感。
+   - ラストは劇的な解決ではなく、静かな余韻（体言止めや「——」）で閉じる。
 
 【出力形式】
-JSON形式のみを出力してください（マークダウン記法や解説は不要）。
+JSON形式のみを出力してください（マークダウン記法不要）。
 {"title": "タイトル", "body": "本文"}
 `
 
       let response;
       let usedModel = '';
-      let lastError = null;
+      let lastError = '';
 
-      // モデル候補を順番に試すループ (フォールバック機能)
-      for (const modelName of MODEL_CANDIDATES) {
-        // console.log(`Trying model: ${modelName}...`);
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-        
-        let attempt = 0;
-        const maxRetries = 1;
+      // Phase 1: 優先リストのモデルを順に試す
+      for (const model of PREFERRED_MODELS) {
+        try {
+          // console.log(`Trying preferred model: ${model}`);
+          response = await callGeminiAPI(model, apiKey, nagiPersona);
+          
+          if (response.ok) {
+            usedModel = model;
+            break;
+          }
 
-        while (attempt <= maxRetries) {
-          try {
-            response = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{ parts: [{ text: nagiPersona }] }],
-                generationConfig: { responseMimeType: "application/json" }
-              })
+          // 503 (Overloaded) なら1回だけ少し待ってリトライ
+          if (response.status === 503) {
+            await wait(1500);
+            response = await callGeminiAPI(model, apiKey, nagiPersona);
+            if (response.ok) {
+              usedModel = model;
+              break;
+            }
+          }
+          
+          // エラー内容を保存して次へ
+          lastError = await response.text();
+        } catch (e: any) {
+          lastError = e.message;
+        }
+      }
+
+      // Phase 2: 全滅した場合、APIから「今使えるモデル」一覧を取得して自動選択する
+      if (!response || !response.ok) {
+        console.warn('Preferred models failed. Fetching dynamic model list...');
+        try {
+          const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+          const listData = await listRes.json();
+          
+          if (listData.models) {
+            // "generateContent" に対応しているモデルのみ抽出
+            const availableModels = listData.models
+              .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+              .map((m: any) => m.name.replace('models/', ''));
+
+            console.log('Available models from API:', availableModels);
+
+            // Flash系を優先してソート
+            const autoCandidates = availableModels.sort((a: string, b: string) => {
+              if (a.includes('flash') && !b.includes('flash')) return -1;
+              if (!a.includes('flash') && b.includes('flash')) return 1;
+              return 0;
             });
 
-            if (response.ok) {
-              usedModel = modelName;
-              break; 
+            // 自動検出したモデルで再トライ
+            for (const model of autoCandidates) {
+              // console.log(`Auto-trying model: ${model}`);
+              response = await callGeminiAPI(model, apiKey, nagiPersona);
+              if (response.ok) {
+                usedModel = model;
+                break;
+              }
             }
-
-            if (response.status === 503) {
-              attempt++;
-              if (attempt <= maxRetries) await wait(1000 * attempt);
-              continue;
-            }
-
-            // 429や404なら即座に次のモデルへ
-            if (response.status === 429 || response.status === 404) {
-              lastError = await response.text();
-              break; 
-            }
-
-            lastError = await response.text();
-            break;
-
-          } catch (e: any) {
-            attempt++;
-            if (attempt <= maxRetries) await wait(1000);
-            else lastError = e.message;
           }
+        } catch (e) {
+          console.error('Failed to fetch dynamic model list:', e);
         }
-
-        if (response && response.ok) break;
       }
 
       if (!response || !response.ok) {
-        console.error('All models failed. Last error:', lastError);
-        let errorMsg = '現在、AIサービスが混み合っており応答できません。';
-        if (typeof lastError === 'string') {
-            if (lastError.includes('429')) errorMsg = '利用上限に達しました。しばらく時間を空けてから再度お試しください。';
-            else if (lastError.includes('404')) errorMsg = 'AIモデルの接続に失敗しました。';
-        }
-        throw new Error(errorMsg);
+        // エラーメッセージの整形
+        let errorMsg = 'AIモデルの接続に失敗しました。';
+        if (lastError.includes('429')) errorMsg = '利用制限(Quota)に達しました。しばらく時間を空けてから再度お試しください。';
+        else if (lastError.includes('404')) errorMsg = '利用可能なAIモデルが見つかりませんでした。';
+        else if (lastError.includes('503')) errorMsg = 'サーバーが混み合っています。';
+        
+        throw new Error(`${errorMsg}\n(Details: ${lastError.slice(0, 100)}...)`);
       }
 
       console.log(`Successfully generated using: ${usedModel}`);
