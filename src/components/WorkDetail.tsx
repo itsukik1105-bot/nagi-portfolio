@@ -290,7 +290,7 @@ export function WorkDetail({ work, onBack }: WorkDetailProps) {
 
         {/* 動画エリア（統一PLAYボタンUI） */}
         {hasAnyVideo && (
-          <div className={`relative w-full mb-16 md:mb-32 fade-in-up ${galleryImages.length > 0 ? 'md:w-1/2' : ''}`} style={{ animationDelay: galleryImages.length > 0 ? '0.3s' : '0.2s' }}>
+          <div className={`relative mb-16 md:mb-32 fade-in-up ${galleryImages.length > 0 ? 'w-full md:w-1/2 mx-auto' : 'w-full'}`} style={{ animationDelay: galleryImages.length > 0 ? '0.3s' : '0.2s' }}>
             <VideoPlayer work={work} hasGallery={galleryImages.length > 0} />
           </div>
         )}
