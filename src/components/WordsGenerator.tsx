@@ -58,9 +58,12 @@ export function WordsGenerator() {
   }, [story, isGenerating])
 
   const scrollToGenerator = () => {
-    sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    // 修正: 'center' から 'start' に変更し、セクションの上端を画面上部に合わせる
+    sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    
     setTimeout(() => {
-      inputRef.current?.focus()
+      // 修正: フォーカス時に勝手にスクロールしないように preventScroll オプションを追加
+      inputRef.current?.focus({ preventScroll: true })
     }, 800)
   }
 
@@ -220,7 +223,7 @@ JSON形式のみを出力してください（マークダウン記法や解説�
 
   return (
     <>
-      {/* フローティングボタン: 常に表示し、より強調する */}
+      {/* フローティングボタン */}
       <button
         onClick={scrollToGenerator}
         className={`fixed bottom-6 right-6 z-50 group transition-all duration-700 ${
