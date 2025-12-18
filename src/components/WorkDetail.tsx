@@ -295,17 +295,66 @@ export function WorkDetail({ work, onBack }: WorkDetailProps) {
           </div>
         )}
 
-        {/* 説明文エリア */}
-        {work.description && (
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 mb-40 fade-in-up" style={{ animationDelay: '0.4s' }}>
-            <div className="md:col-span-4">
-              <h2 className="text-xs text-[#444] uppercase tracking-[0.2em] mb-4">Description</h2>
-            </div>
-            <div className="md:col-span-8">
-              <p className="text-base md:text-lg leading-[2.0] text-[#ccc] font-light whitespace-pre-wrap">
-                {work.description}
-              </p>
-            </div>
+        {/* 作品詳細エリア（4段構成） */}
+        {(work.about || work.concept || work.process || work.client) && (
+          <div className="space-y-16 md:space-y-20 mb-40 fade-in-up" style={{ animationDelay: '0.4s' }}>
+            
+            {/* About */}
+            {work.about && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
+                <div className="md:col-span-3">
+                  <h2 className="text-xs text-[#555] uppercase tracking-[0.2em]">About</h2>
+                </div>
+                <div className="md:col-span-9">
+                  <p className="text-base md:text-lg leading-[2.0] text-[#ccc] font-light whitespace-pre-wrap">
+                    {work.about}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Concept */}
+            {work.concept && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
+                <div className="md:col-span-3">
+                  <h2 className="text-xs text-[#555] uppercase tracking-[0.2em]">Concept</h2>
+                </div>
+                <div className="md:col-span-9">
+                  <p className="text-base md:text-lg leading-[2.0] text-[#ccc] font-light whitespace-pre-wrap">
+                    {work.concept}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Process（空欄なら非表示） */}
+            {work.process && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
+                <div className="md:col-span-3">
+                  <h2 className="text-xs text-[#555] uppercase tracking-[0.2em]">Process</h2>
+                </div>
+                <div className="md:col-span-9">
+                  <p className="text-base md:text-lg leading-[2.0] text-[#ccc] font-light whitespace-pre-wrap">
+                    {work.process}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Client（空欄なら非表示） */}
+            {work.client && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
+                <div className="md:col-span-3">
+                  <h2 className="text-xs text-[#555] uppercase tracking-[0.2em]">Client</h2>
+                </div>
+                <div className="md:col-span-9">
+                  <p className="text-base md:text-lg leading-[2.0] text-white font-normal">
+                    {work.client}
+                  </p>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
 

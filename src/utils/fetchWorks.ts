@@ -21,15 +21,19 @@ export const fetchWorks = async (): Promise<Work[]> => {
             title: row.title,
             category: row.category,
             year: Number(row.year),
-            thumbnail: row.thumbnail || '',
+            thumbnail: row.thumbnail || undefined,
             // 3パターンの動画URL（スプレッドシートから自動取得）
             videoUrl: row.videoUrl || undefined,           // 直接埋め込み（MP4等）
             youtubeUrl: row.youtubeUrl || undefined,       // YouTube埋め込み
             externalVideoUrl: row.externalVideoUrl || undefined, // 外部リンク（Instagram等）
-            description: row.description || '',
-            role: row.role || '',
+            role: row.role || undefined,
             // gallery列が存在する場合、'|' で区切って配列にする
             gallery: row.gallery ? row.gallery.split('|').map((url: string) => url.trim()) : undefined,
+            // 作品詳細（4段構成）
+            about: row.about || undefined,
+            concept: row.concept || undefined,
+            process: row.process || undefined,
+            client: row.client || undefined,
           }))
           
           // IDとタイトルがある有効なデータだけを返す
