@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Hero } from './components/Hero'
 import { Works } from './components/Works'
 import { AboutSection } from './components/AboutSection'
@@ -10,7 +10,7 @@ import { Contact } from './components/Contact'
 import { siteConfig } from './data/site-config'
 import { fetchWorks } from './utils/fetchWorks'
 import { type Work } from './data/works'
-import { useContentProtection } from './hooks/useContentProtection' // ★追加
+import { useContentProtection } from './hooks/useContentProtection'
 
 function App() {
   const [selectedWork, setSelectedWork] = useState<Work | null>(null)
@@ -18,8 +18,19 @@ function App() {
   const [isContactOpen, setIsContactOpen] = useState(false)
   const [works, setWorks] = useState<Work[]>([])
 
-  // ★追加: 画像・動画の保護（右クリック・長押し・ドラッグ無効化）
+  // 画像・動画の保護（右クリック・長押し・ドラッグ無効化）
   useContentProtection()
+
+  // Google Fonts読み込み
+  useEffect(() => {
+    const link = document.createElement('link')
+    link.href = 'https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;500;700;900&display=swap'
+    link.rel = 'stylesheet'
+    document.head.appendChild(link)
+    return () => {
+      document.head.removeChild(link)
+    }
+  }, [])
 
   useState(() => {
     fetchWorks().then((data) => {
@@ -74,6 +85,11 @@ function App() {
       <OpeningLoading />
       <CustomCursor />
       <style>{`
+        /* フォント設定 */
+        * {
+          font-family: 'Zen Kaku Gothic New', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
         .film-grain {
           position: fixed;
           top: 0;
