@@ -58,17 +58,24 @@ export function WordsGenerator() {
   }, [story, isGenerating])
 
   const scrollToGenerator = () => {
-    // 修正: 'center' から 'start' に変更し、セクションの上端を画面上部に合わせる
     sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    
     setTimeout(() => {
-      // 修正: フォーカス時に勝手にスクロールしないように preventScroll オプションを追加
       inputRef.current?.focus({ preventScroll: true })
     }, 800)
   }
 
   // 指定ミリ秒待機するヘルパー関数
   const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // 利用するモデルの候補リスト（優先順）
+  // 2025年12月時点で有効なモデルを優先的に配置
+  const MODEL_CANDIDATES = [
+    'gemini-2.5-flash',       // 最新版（制限きつめ）
+    'gemini-2.0-flash',       // 安定版（本命）
+    'gemini-2.5-flash-lite',  // 軽量版（制限ゆるめの可能性）
+    'gemini-2.0-flash-lite',  // 旧軽量版
+    'gemini-1.5-flash'        // 旧安定版（廃止の可能性あり）
+  ];
 
   const generateWords = async () => {
     if (!theme.trim()) {
@@ -86,11 +93,6 @@ export function WordsGenerator() {
       if (!apiKey) {
         throw new Error('APIキー (VITE_GEMINI_API_KEY) が見つかりません。.envファイルを確認してください。')
       }
-
-      const modelName = 'gemini-2.5-flash'
-      console.log(`Using Gemini Model: ${modelName}`)
-
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`
 
       const nagiPersona = `
 あなたは映像作家・脚本家「nagi」として、テーマ「${theme}」から架空の物語の冒頭（タイトル＋本文100字程度）を創作してください。行や段落は適宜改行し、読みやすくしてください。
@@ -117,71 +119,76 @@ JSON形式のみを出力してください（マークダウン記法や解説�
 {"title": "タイトル", "body": "本文"}
 `
 
-      // リトライロジック (最大3回試行)
       let response;
-      let attempt = 0;
-      const maxRetries = 3;
+      let usedModel = '';
+      let lastError = null;
 
-      while (attempt < maxRetries) {
-        try {
-          response = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{
-                  text: nagiPersona
-                }]
-              }],
-              generationConfig: {
-                responseMimeType: "application/json" 
-              }
-            })
-          });
+      // モデル候補を順番に試すループ
+      for (const modelName of MODEL_CANDIDATES) {
+        // console.log(`Trying model: ${modelName}...`); // デバッグ用ログ
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+        
+        // リトライロジック
+        let attempt = 0;
+        const maxRetries = 1; // 各モデルごとのリトライ回数（短縮）
 
-          if (response.status === 503) {
-            attempt++;
-            console.warn(`Server overloaded (503). Retrying... (${attempt}/${maxRetries})`);
-            if (attempt < maxRetries) {
-              await wait(2000 * attempt);
+        while (attempt <= maxRetries) {
+          try {
+            response = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: nagiPersona }] }],
+                generationConfig: { responseMimeType: "application/json" }
+              })
+            });
+
+            // 成功したらループを抜ける
+            if (response.ok) {
+              usedModel = modelName;
+              break; 
+            }
+
+            // 503 (Server Error) なら待機してリトライ
+            if (response.status === 503) {
+              attempt++;
+              if (attempt <= maxRetries) await wait(1000 * attempt);
               continue;
             }
-          }
-          break;
 
-        } catch (e) {
-          attempt++;
-          if (attempt < maxRetries) {
-            await wait(2000);
-            continue;
+            // 429 (Quota) や 404 (Not Found) なら、このモデルは即座に諦めて次のモデルへ
+            if (response.status === 429 || response.status === 404) {
+              lastError = await response.text();
+              break; 
+            }
+
+            lastError = await response.text();
+            break;
+
+          } catch (e: any) {
+            attempt++;
+            if (attempt <= maxRetries) await wait(1000);
+            else lastError = e.message;
           }
-          throw e;
         }
+
+        // 成功レスポンスがあれば全ループ終了
+        if (response && response.ok) break;
       }
 
+      // すべてのモデルで失敗した場合
       if (!response || !response.ok) {
-        const errorText = await response?.text() || 'Unknown Error';
-        
-        if (response?.status === 404) {
-           console.warn(`モデル ${modelName} が見つかりません (404)。利用可能なモデル一覧を取得します...`)
-           try {
-             const listResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`)
-             const listData = await listResponse.json()
-             console.group('Available Gemini Models')
-             console.table(listData.models?.map((m: any) => ({ 
-               name: m.name.replace('models/', ''), 
-               methods: m.supportedGenerationMethods 
-             })))
-             console.groupEnd()
-           } catch (e) {
-             console.error('モデル一覧の取得にも失敗しました:', e)
-           }
+        console.error('All models failed. Last error:', lastError);
+        // エラー詳細から原因を推測してメッセージを作成
+        let errorMsg = '現在、AIサービスが混み合っており応答できません。';
+        if (typeof lastError === 'string') {
+            if (lastError.includes('429')) errorMsg = '利用上限に達しました。しばらく時間を空けてから再度お試しください。';
+            else if (lastError.includes('404')) errorMsg = 'AIモデルの接続に失敗しました。';
         }
-        
-        throw new Error(`HTTP Error: ${response?.status || 'Unknown'} (${modelName}) - ${errorText}`)
+        throw new Error(errorMsg);
       }
+
+      console.log(`Successfully generated using: ${usedModel}`);
 
       const data = await response.json()
       const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text
@@ -207,8 +214,8 @@ JSON形式のみを出力してください（マークダウン記法や解説�
     } catch (error: any) {
       console.error('Generation Error:', error)
       setStory({
-        title: 'エラー発生',
-        body: `[SYSTEM MESSAGE] ${error.message}\n(サーバーが混み合っているようです。少し時間を空けて再度お試しください)`
+        title: 'Error',
+        body: `[SYSTEM MESSAGE]\n${error.message}`
       })
     } finally {
       setIsGenerating(false)
@@ -249,7 +256,6 @@ JSON形式のみを出力してください（マークダウン記法や解説�
         ref={sectionRef}
         className="py-32 px-6 bg-black relative z-20 overflow-hidden"
       >
-        {/* 背景のノイズのみ残し、枠線は削除 */}
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] pointer-events-none mix-blend-overlay"></div>
 
         <div className="max-w-[800px] mx-auto relative z-10">
@@ -258,14 +264,12 @@ JSON形式のみを出力してください（マークダウン記法や解説�
             <h2 className="text-4xl md:text-6xl font-extralight tracking-[0.15em] text-white mb-8">
               物語は、ここから
             </h2>
-            {/* 説明文を配置: ポイント数を下げ、シンプルに */}
             <p className="text-xs md:text-sm text-white/50 tracking-[0.2em] font-light">
               テーマを入力すると、物語が始まります。
             </p>
           </div>
 
           <div className="max-w-[500px] mx-auto">
-            {/* 入力エリア: 枠を完全撤廃し、アンダーラインのみで表現 */}
             <div className="mb-20 text-center relative group">
               <input
                 ref={inputRef}
@@ -277,11 +281,9 @@ JSON形式のみを出力してください（マークダウン記法や解説�
                 className="w-full bg-transparent border-b border-white/20 py-4 text-center text-2xl text-white placeholder:text-white/10 focus:outline-none focus:border-white/80 transition-all duration-700 tracking-widest font-light"
                 disabled={isGenerating}
               />
-              {/* ホバー時の装飾 */}
               <div className="absolute bottom-0 left-0 w-0 h-px bg-white group-hover:w-full transition-all duration-700 ease-out opacity-50" />
             </div>
 
-            {/* 出力エリア */}
             <div className="min-h-[200px] flex items-center justify-center mb-12">
               {isGenerating ? (
                 <div className="flex flex-col items-center gap-6">
@@ -292,7 +294,6 @@ JSON形式のみを出力してください（マークダウン記法や解説�
                 </div>
               ) : story ? (
                 <div className="w-full text-center">
-                   {/* タイトルを先に表示 */}
                   {!isTyping && story.title && (
                     <div className="text-sm tracking-[0.3em] text-white/80 mb-8 fade-in">
                       『 {story.title} 』
