@@ -87,19 +87,44 @@ export function WordsGenerator() {
     setDisplayedWords('')
 
     try {
-      // .envからGeminiのAPIキーを取得 (余分な空白を除去)
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim()
       
       if (!apiKey) {
         throw new Error('APIキー (VITE_GEMINI_API_KEY) が見つかりません。.envファイルを確認してください。')
       }
 
-      // ユーザー指定: gemini-2.5-flash を試行
       const modelName = 'gemini-2.5-flash'
-      
       console.log(`Using Gemini Model: ${modelName}`)
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`
+
+      // nagiの世界観を詳細に定義したプロンプト
+      const nagiPersona = `
+あなたは映像作家・脚本家「nagi」です。テーマ「${theme}」から、あなたの作風で架空の物語の「タイトル」と「書き出し（400文字程度）」を創作してください。
+
+【nagiの世界観・構成要素】
+1. **舞台と空気感**
+   - 東京の喧騒とその裏にある静寂（下北沢の路地、深夜のコインランドリー、明け方の駅のホーム）。
+   - 「フィルムカメラ」を通したような粒子の粗い質感。光と影、温度、湿度を感じさせる描写。
+
+2. **登場人物の自意識**
+   - 社会の「新品（メインストリーム）」に馴染めない、「中古（サブカルチャー・マイノリティ）」としての自意識や葛藤。
+   - 何かに没頭することでしか世界と繋がれない不器用さ（映画、音楽、文学への耽溺）。
+   - シニカルな視点と、それを裏返すような純粋な憧れや感傷（センチメンタル）。
+
+3. **テーマの揺らぎ**
+   - 「現実と虚構」「正気と狂気」「過去と現在」の境界線が曖昧になる瞬間。
+   - 誰か（「彼女」や「あの子」）の不在、あるいは幻影を追いかける喪失感。
+
+4. **文体の特徴**
+   - 独白（モノローグ）調。淡々としているが、核心を突く言葉選び。
+   - 映像的なカット割りを意識させる文章のリズム。
+   - 結びは「——」や体言止めを用い、唐突だが映画のラストシーンのような余韻を残すこと。
+
+【出力形式】
+以下のJSON形式のみを出力してください（マークダウン記法や解説は不要）。
+{"title": "タイトル", "body": "本文"}
+`
 
       const response = await fetch(url, {
           method: 'POST',
@@ -109,16 +134,7 @@ export function WordsGenerator() {
           body: JSON.stringify({
             contents: [{
               parts: [{
-                text: `あなたは映像作家・脚本家nagiです。テーマ「${theme}」から、nagiの作風で架空の物語の「タイトル」と「書き出し」を創作してください。
-
-【nagiの世界観】
-- 都会の孤独、深夜の静寂、ガラス越しの視点
-- 抽象的で詩的な表現
-- 「——」で余韻を残して終わる
-
-【出力形式】
-JSON形式のみを出力してください。余計なマークダウンや解説は不要です。
-{"title": "タイトル", "body": "本文"}`
+                text: nagiPersona
               }]
             }],
             generationConfig: {
@@ -130,7 +146,6 @@ JSON形式のみを出力してください。余計なマークダウンや解�
       if (!response.ok) {
         const errorText = await response.text()
         
-        // 404エラーの場合、モデル一覧を取得してコンソールに出力する
         if (response.status === 404) {
            console.warn(`モデル ${modelName} が見つかりません (404)。利用可能なモデル一覧を取得します...`)
            try {
@@ -142,17 +157,14 @@ JSON形式のみを出力してください。余計なマークダウンや解�
                methods: m.supportedGenerationMethods 
              })))
              console.groupEnd()
-             console.log('上記リストにあるモデル名を src/components/WordsGenerator.tsx の modelName に設定してください。')
            } catch (e) {
              console.error('モデル一覧の取得にも失敗しました:', e)
            }
         }
-
         throw new Error(`HTTP Error: ${response.status} (${modelName}) - ${errorText}`)
       }
 
       const data = await response.json()
-      
       const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text
       
       if (!generatedText) {
