@@ -6,16 +6,20 @@ import { WorkDetail } from './components/WorkDetail'
 import { Header } from './components/Header'
 import { CustomCursor } from './components/CustomCursor'
 import { OpeningLoading } from './components/OpeningLoading'
-import { Contact } from './components/Contact' // ★追加
+import { Contact } from './components/Contact'
 import { siteConfig } from './data/site-config'
 import { fetchWorks } from './utils/fetchWorks'
 import { type Work } from './data/works'
+import { useContentProtection } from './hooks/useContentProtection' // ★追加
 
 function App() {
   const [selectedWork, setSelectedWork] = useState<Work | null>(null)
   const [isAboutOpen, setIsAboutOpen] = useState(false)
-  const [isContactOpen, setIsContactOpen] = useState(false) // ★追加: コンタクト状態
+  const [isContactOpen, setIsContactOpen] = useState(false)
   const [works, setWorks] = useState<Work[]>([])
+
+  // ★追加: 画像・動画の保護（右クリック・長押し・ドラッグ無効化）
+  useContentProtection()
 
   useState(() => {
     fetchWorks().then((data) => {
@@ -26,7 +30,7 @@ function App() {
   const handleBackToHome = () => {
     setSelectedWork(null)
     setIsAboutOpen(false)
-    setIsContactOpen(false) // ★追加
+    setIsContactOpen(false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -35,7 +39,7 @@ function App() {
     content = <WorkDetail work={selectedWork} onBack={handleBackToHome} />
   } else if (isAboutOpen) {
     content = <AboutSection onBack={handleBackToHome} siteConfig={siteConfig} />
-  } else if (isContactOpen) { // ★追加: Contact表示
+  } else if (isContactOpen) {
     content = <Contact onBack={handleBackToHome} />
   } else {
     content = (
@@ -43,7 +47,7 @@ function App() {
         <Header 
           siteName={siteConfig.siteName} 
           onAboutClick={() => setIsAboutOpen(true)}
-          onContactClick={() => setIsContactOpen(true)} // ★追加
+          onContactClick={() => setIsContactOpen(true)}
           onLogoClick={handleBackToHome}
         />
 
