@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { ArrowDown } from 'lucide-react'
+import { ArrowDown, Sparkles } from 'lucide-react'
 
 interface GeneratedStory {
   title: string
@@ -12,31 +12,19 @@ export function WordsGenerator() {
   const [displayedWords, setDisplayedWords] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
+  
+  // ページロード後、少ししてからボタンを表示するフラグ
   const [isVisible, setIsVisible] = useState(false)
   
   const inputRef = useRef<HTMLInputElement>(null)
   const sectionRef = useRef<HTMLElement>(null)
 
-  // スクロール検知
+  // ページ読み込み時にボタンを表示 (スクロール依存を廃止)
   useEffect(() => {
-    const handleScroll = () => {
-      if (!sectionRef.current) return
-      
-      const scrollY = window.scrollY
-      const windowHeight = window.innerHeight
-      const sectionTop = sectionRef.current.offsetTop
-      const isSectionInView = scrollY + windowHeight > sectionTop + 100
-      
-      if (isSectionInView) {
-        setIsVisible(false)
-      } else {
-        setIsVisible(scrollY > 300)
-      }
-    }
-
-    window.addEventListener('scroll', handleScroll)
-    handleScroll()
-    return () => window.removeEventListener('scroll', handleScroll)
+    const timer = setTimeout(() => {
+      setIsVisible(true)
+    }, 1000)
+    return () => clearTimeout(timer)
   }, [])
 
   // タイプライター効果
@@ -101,6 +89,31 @@ export function WordsGenerator() {
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`
 
+      const nagiPersona = `
+あなたは映像作家・脚本家「nagi」として、テーマ「${theme}」から架空の物語の冒頭（タイトル＋本文100字程度）を創作してください。行や段落は適宜改行し、読みやすくしてください。
+過去作のキャラクターや職業設定（カメラマン、メイド、小説家など）をそのまま使うのではなく、以下の「nagi的エッセンス」を抽出して、全く新しい情景を描いてください。
+
+【nagi的エッセンス（抽象的定義）】
+1. **監督・脚本家としての視点と距離感**
+   - 世界を何か一枚越しに見ているような、どこか冷めた、しかし対象への愛着を捨てきれない視点。
+   - 「マジョリティ・社会的な成功」に対する違和感と、「マイノリティ・忘れ去られたもの」への共感。
+   - 都会の喧騒の中にふと訪れる「真空」のような静寂の瞬間を切り取る。
+
+2. **文体とリズム**
+   - 説明的な文章ではなく、映像のカット割りを想起させるリズム感。
+   - 独白（モノローグ）は、誰かに語りかけるようでいて、自分自身に言い聞かせているような内省的なトーン。
+   - 温度、湿度、光の粒子、音の響きなど、「感覚」に訴える描写を重視する（例：夏の湿った熱気、冬の乾いた空気、氷が溶ける音）。
+
+3. **物語の核**
+   - 「現実」と「虚構（あるいは妄想・夢）」の境界線が曖昧になる瞬間。
+   - 誰か（大切な存在、あるいは過去の自分）の「不在」が、逆にその存在を強く感じさせるような喪失感。
+   - ラストは劇的な解決ではなく、ふっと息を吐くような、あるいはその時を閉じ込めるような、静かな余韻（体言止めや「——」の使用）で閉じること。
+
+【出力形式】
+JSON形式のみを出力してください（マークダウン記法や解説は不要）。
+{"title": "タイトル", "body": "本文"}
+`
+
       // リトライロジック (最大3回試行)
       let response;
       let attempt = 0;
@@ -116,31 +129,7 @@ export function WordsGenerator() {
             body: JSON.stringify({
               contents: [{
                 parts: [{
-                  text: `あなたは映像作家・脚本家「nagi」です。テーマ「${theme}」から、あなたの作風で架空の物語の「タイトル」と「書き出し（400文字程度）」を創作してください。
-
-【nagiの世界観・構成要素】
-1. **舞台と空気感**
-   - 東京の喧騒とその裏にある静寂（下北沢の路地、深夜のコインランドリー、明け方の駅のホーム）。
-   - 「フィルムカメラ」を通したような粒子の粗い質感。光と影、温度、湿度を感じさせる描写。
-
-2. **登場人物の自意識**
-   - 社会のメインストリームに馴染めない、サブカルチャー・マイノリティとしての自意識や葛藤。
-   - 何かに没頭することでしか世界と繋がれない不器用さ（映画、音楽、文学への耽溺）。
-   - シニカルな視点と、それを裏返すような純粋な憧れや感傷（センチメンタル）。
-
-3. **テーマの揺らぎ**
-   - 「現実と虚構」「正気と狂気」「過去と現在」の境界線が曖昧になる瞬間。
-   - 誰か（「彼女」や「あの子」）の不在、あるいは幻影を追いかける喪失感。
-
-4. **文体の特徴**
-   - 独白（モノローグ）調。淡々としているが、核心を突く言葉選び。
-   - 映像的なカット割りを意識させる文章のリズム。
-   - 結びは「——」や体言止めを用い、唐突だが映画のラストシーンのような余韻を残すこと。
-
-【出力形式】
-以下のJSON形式のみを出力してください（マークダウン記法や解説は不要）。
-{"title": "タイトル", "body": "本文"}
-`
+                  text: nagiPersona
                 }]
               }],
               generationConfig: {
@@ -149,21 +138,17 @@ export function WordsGenerator() {
             })
           });
 
-          // 503エラー（サーバー過負荷）の場合は待機してリトライ
           if (response.status === 503) {
             attempt++;
             console.warn(`Server overloaded (503). Retrying... (${attempt}/${maxRetries})`);
             if (attempt < maxRetries) {
-              await wait(2000 * attempt); // 2秒, 4秒... と待機時間を増やす
+              await wait(2000 * attempt);
               continue;
             }
           }
-
-          // その他のエラー、または成功した場合はループを抜ける
           break;
 
         } catch (e) {
-          // ネットワークエラー等の場合もリトライ
           attempt++;
           if (attempt < maxRetries) {
             await wait(2000);
@@ -176,7 +161,6 @@ export function WordsGenerator() {
       if (!response || !response.ok) {
         const errorText = await response?.text() || 'Unknown Error';
         
-        // 404ハンドリング（モデルが見つからない場合）
         if (response?.status === 404) {
            console.warn(`モデル ${modelName} が見つかりません (404)。利用可能なモデル一覧を取得します...`)
            try {
@@ -236,21 +220,23 @@ export function WordsGenerator() {
 
   return (
     <>
+      {/* フローティングボタン: 常に表示し、より強調する */}
       <button
         onClick={scrollToGenerator}
-        className={`fixed bottom-8 right-8 z-40 group transition-all duration-700 ${
+        className={`fixed bottom-6 right-6 z-50 group transition-all duration-700 ${
           isVisible 
             ? 'opacity-100 translate-y-0' 
             : 'opacity-0 translate-y-4 pointer-events-none'
         }`}
       >
-        <div className="relative flex items-center gap-3 px-5 py-3 bg-[#1a1a1a] backdrop-blur-sm border border-[#666] rounded-full hover:border-white hover:bg-[#222] transition-all duration-500">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+        {/* 白背景・黒文字でコントラストを高め、視認性を向上 */}
+        <div className="relative flex items-center gap-3 px-6 py-4 bg-white shadow-[0_0_30px_rgba(255,255,255,0.3)] rounded-full hover:scale-105 transition-all duration-300">
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-black opacity-30"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-black"></span>
           </span>
-          <span className="text-[12px] tracking-[0.15em] text-white font-medium flex items-center gap-2">
-            Story <ArrowDown className="w-3 h-3" />
+          <span className="text-sm tracking-[0.2em] text-black font-bold flex items-center gap-2">
+            Start Your Story <ArrowDown className="w-4 h-4" />
           </span>
         </div>
       </button>
@@ -258,79 +244,76 @@ export function WordsGenerator() {
       <section 
         id="words-generator" 
         ref={sectionRef}
-        className="py-32 px-6 bg-black border-t border-[#111] relative z-20"
+        className="py-32 px-6 bg-black relative z-20 overflow-hidden"
       >
-        <div className="max-w-[900px] mx-auto">
+        {/* 背景のノイズのみ残し、枠線は削除 */}
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] pointer-events-none mix-blend-overlay"></div>
+
+        <div className="max-w-[800px] mx-auto relative z-10">
           
-          <div className="text-center mb-16">
-            <div className="flex items-center justify-center gap-6 mb-6">
-              <div className="w-12 md:w-20 h-px bg-gradient-to-r from-transparent to-white/40" />
-              <span className="text-[11px] tracking-[0.5em] text-white/70 uppercase font-medium">Story Generator</span>
-              <div className="w-12 md:w-20 h-px bg-gradient-to-l from-transparent to-white/40" />
-            </div>
-            <h2 className="text-3xl md:text-5xl font-light tracking-[0.1em] text-white mb-4">
+          <div className="text-center mb-24">
+            <h2 className="text-4xl md:text-6xl font-extralight tracking-[0.15em] text-white mb-8">
               物語は、ここから
             </h2>
+            {/* 説明文を配置: ポイント数を下げ、シンプルに */}
+            <p className="text-xs md:text-sm text-white/50 tracking-[0.2em] font-light">
+              テーマを入力すると、物語が始まります。
+            </p>
           </div>
 
-          <div className="bg-[#0a0a0a] border border-[#222] rounded-2xl p-8 md:p-16 relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] pointer-events-none"></div>
-
-            <div className="relative z-10 mb-16 text-center">
-              <label className="block text-[10px] tracking-[0.4em] text-white/50 uppercase mb-4">
-                Theme
-              </label>
-              <div className="relative max-w-[400px] mx-auto">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={theme}
-                  onChange={(e) => setTheme(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="雨、別れ、夜明け..."
-                  className="w-full bg-transparent border-b border-[#333] focus:border-white py-3 text-center text-lg text-white placeholder:text-[#333] focus:outline-none transition-all duration-500 tracking-wider"
-                  disabled={isGenerating}
-                />
-              </div>
+          <div className="max-w-[500px] mx-auto">
+            {/* 入力エリア: 枠を完全撤廃し、アンダーラインのみで表現 */}
+            <div className="mb-20 text-center relative group">
+              <input
+                ref={inputRef}
+                type="text"
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Theme..."
+                className="w-full bg-transparent border-b border-white/20 py-4 text-center text-2xl text-white placeholder:text-white/10 focus:outline-none focus:border-white/80 transition-all duration-700 tracking-widest font-light"
+                disabled={isGenerating}
+              />
+              {/* ホバー時の装飾 */}
+              <div className="absolute bottom-0 left-0 w-0 h-px bg-white group-hover:w-full transition-all duration-700 ease-out opacity-50" />
             </div>
 
-            <div className="relative z-10 min-h-[180px] flex items-center justify-center mb-12">
+            {/* 出力エリア */}
+            <div className="min-h-[200px] flex items-center justify-center mb-12">
               {isGenerating ? (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="flex gap-2">
-                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
-                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
-                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '400ms' }} />
+                <div className="flex flex-col items-center gap-6">
+                  <div className="flex gap-3">
+                    <Sparkles className="w-5 h-5 text-white/40 animate-spin-slow" />
                   </div>
-                  <span className="text-xs tracking-[0.2em] text-white/50">紡いでいます...</span>
+                  <span className="text-[10px] tracking-[0.3em] text-white/30 animate-pulse">CREATING...</span>
                 </div>
               ) : story ? (
-                <div className="max-w-[600px] text-center">
-                  <p className="text-base md:text-lg leading-[2.4] text-white/90 font-light whitespace-pre-wrap mb-4">
-                    {displayedWords}
-                    {isTyping && <span className="inline-block w-[1.5px] h-[1em] bg-white ml-1 animate-blink align-middle" />}
-                  </p>
+                <div className="w-full text-center">
+                   {/* タイトルを先に表示 */}
                   {!isTyping && story.title && (
-                    <div className="text-xs tracking-[0.2em] text-white/40 mt-6 fade-in">
-                      —— 『{story.title}』
+                    <div className="text-sm tracking-[0.3em] text-white/80 mb-8 fade-in">
+                      『 {story.title} 』
                     </div>
                   )}
+                  <p className="text-base leading-[2.6] text-white/80 font-extralight whitespace-pre-wrap tracking-wide">
+                    {displayedWords}
+                    {isTyping && <span className="inline-block w-[1px] h-[1.2em] bg-white/50 ml-2 animate-blink align-middle" />}
+                  </p>
                 </div>
               ) : (
-                <p className="text-sm text-[#333] tracking-widest text-center">
-                  Enter a theme to generate a story.
-                </p>
+                <div className="h-full w-full"></div>
               )}
             </div>
 
-            <div className="relative z-10 flex justify-center">
+            <div className="flex justify-center">
               <button
                 onClick={generateWords}
                 disabled={isGenerating || !theme.trim()}
-                className="group relative px-10 py-3 rounded-full border border-[#333] hover:border-white hover:bg-white/5 transition-all duration-500 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="group relative px-10 py-4 disabled:opacity-0 disabled:cursor-not-allowed transition-all duration-500"
               >
-                <span className="text-xs tracking-[0.2em] text-white">
-                  {isGenerating ? 'GENERATING' : 'GENERATE'}
+                <div className="absolute inset-0 border border-white/20 rounded-full group-hover:border-white/60 transition-colors duration-500" />
+                <span className="text-[10px] tracking-[0.4em] text-white/60 group-hover:text-white transition-colors duration-500 relative z-10">
+                  GENERATE
                 </span>
               </button>
             </div>
@@ -347,12 +330,19 @@ export function WordsGenerator() {
         .animate-blink {
           animation: blink 0.8s infinite;
         }
+        .animate-spin-slow {
+          animation: spin 3s linear infinite;
+        }
         .fade-in {
-          animation: fadeIn 1s ease-out forwards;
+          animation: fadeIn 2s ease-out forwards;
         }
         @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </>
