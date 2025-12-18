@@ -76,6 +76,9 @@ export function WordsGenerator() {
     }, 800)
   }
 
+  // 指定ミリ秒待機するヘルパー関数
+  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
   const generateWords = async () => {
     if (!theme.trim()) {
       inputRef.current?.focus()
@@ -98,9 +101,22 @@ export function WordsGenerator() {
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`
 
-      // nagiの世界観を詳細に定義したプロンプト
-      const nagiPersona = `
-あなたは映像作家・脚本家「nagi」です。テーマ「${theme}」から、あなたの作風で架空の物語の「タイトル」と「書き出し（400文字程度）」を創作してください。
+      // リトライロジック (最大3回試行)
+      let response;
+      let attempt = 0;
+      const maxRetries = 3;
+
+      while (attempt < maxRetries) {
+        try {
+          response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{
+                  text: `あなたは映像作家・脚本家「nagi」です。テーマ「${theme}」から、あなたの作風で架空の物語の「タイトル」と「書き出し（400文字程度）」を創作してください。
 
 【nagiの世界観・構成要素】
 1. **舞台と空気感**
@@ -108,7 +124,7 @@ export function WordsGenerator() {
    - 「フィルムカメラ」を通したような粒子の粗い質感。光と影、温度、湿度を感じさせる描写。
 
 2. **登場人物の自意識**
-   - 社会の「新品（メインストリーム）」に馴染めない、「中古（サブカルチャー・マイノリティ）」としての自意識や葛藤。
+   - 社会のメインストリームに馴染めない、サブカルチャー・マイノリティとしての自意識や葛藤。
    - 何かに没頭することでしか世界と繋がれない不器用さ（映画、音楽、文学への耽溺）。
    - シニカルな視点と、それを裏返すような純粋な憧れや感傷（センチメンタル）。
 
@@ -125,28 +141,43 @@ export function WordsGenerator() {
 以下のJSON形式のみを出力してください（マークダウン記法や解説は不要）。
 {"title": "タイトル", "body": "本文"}
 `
+                }]
+              }],
+              generationConfig: {
+                responseMimeType: "application/json" 
+              }
+            })
+          });
 
-      const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: nagiPersona
-              }]
-            }],
-            generationConfig: {
-              responseMimeType: "application/json" 
+          // 503エラー（サーバー過負荷）の場合は待機してリトライ
+          if (response.status === 503) {
+            attempt++;
+            console.warn(`Server overloaded (503). Retrying... (${attempt}/${maxRetries})`);
+            if (attempt < maxRetries) {
+              await wait(2000 * attempt); // 2秒, 4秒... と待機時間を増やす
+              continue;
             }
-          })
-      })
+          }
 
-      if (!response.ok) {
-        const errorText = await response.text()
+          // その他のエラー、または成功した場合はループを抜ける
+          break;
+
+        } catch (e) {
+          // ネットワークエラー等の場合もリトライ
+          attempt++;
+          if (attempt < maxRetries) {
+            await wait(2000);
+            continue;
+          }
+          throw e;
+        }
+      }
+
+      if (!response || !response.ok) {
+        const errorText = await response?.text() || 'Unknown Error';
         
-        if (response.status === 404) {
+        // 404ハンドリング（モデルが見つからない場合）
+        if (response?.status === 404) {
            console.warn(`モデル ${modelName} が見つかりません (404)。利用可能なモデル一覧を取得します...`)
            try {
              const listResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`)
@@ -161,7 +192,8 @@ export function WordsGenerator() {
              console.error('モデル一覧の取得にも失敗しました:', e)
            }
         }
-        throw new Error(`HTTP Error: ${response.status} (${modelName}) - ${errorText}`)
+        
+        throw new Error(`HTTP Error: ${response?.status || 'Unknown'} (${modelName}) - ${errorText}`)
       }
 
       const data = await response.json()
@@ -189,7 +221,7 @@ export function WordsGenerator() {
       console.error('Generation Error:', error)
       setStory({
         title: 'エラー発生',
-        body: `[SYSTEM MESSAGE] ${error.message}\n(詳細なエラー原因はブラウザのConsoleを確認してください)`
+        body: `[SYSTEM MESSAGE] ${error.message}\n(サーバーが混み合っているようです。少し時間を空けて再度お試しください)`
       })
     } finally {
       setIsGenerating(false)
