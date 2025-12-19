@@ -107,13 +107,11 @@ export function WordsGenerator() {
 
   const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // ■ 優先的に試すモデルリスト (画像情報を元に最適化)
-  // Lite版を最優先にしてAPI制限(429)を回避しつつ、利用可能な最新モデルを網羅
+  // ■ 優先的に試すモデルリスト
   const PREFERRED_MODELS = [
-    'gemini-2.5-flash-lite', // 最優先：最新かつ制限が緩い
-    'gemini-2.0-flash-lite', // 次点：安定版の軽量モデル
-    'gemini-3-flash',        // 予備：次世代モデル（利用可能な場合）
-    'gemini-2.5-flash',      // 予備：標準モデル（制限きつめ）
+    'gemini-2.5-flash-lite', // 最優先：軽量で制限にかかりにくい
+    'gemini-2.5-flash',      // 次点：最新版
+    'gemini-3-flash',        // 予備：次世代モデル
     'gemini-2.0-flash'       // 予備：旧安定版
   ];
 
@@ -159,6 +157,7 @@ export function WordsGenerator() {
         throw new Error('APIキー (VITE_GEMINI_API_KEY) が見つかりません。.envファイルを確認してください。')
       }
 
+      // プロンプトを更新（nagi的エッセンスの再定義）
       const nagiPersona = `
 あなたは映像作家・脚本家「nagi」として、テーマ「${theme}」から架空の物語の冒頭（タイトル＋本文150字程度）を創作してください。行や段落は適宜改行し、読みやすくしてください。
 過去作のキャラクターや職業設定（カメラマン、メイド、小説家など）、またここに出てきた文言をそのまま使うのではなく、以下の「nagi的エッセンス」を学習した上で、抽象的に「nagi的エッセンス」をトレースし、全く新しい情景を描いてください。
@@ -190,17 +189,14 @@ JSON形式のみを出力してください（マークダウン記法不要）�
       let usedModel = '';
       let lastError = '';
 
-      // Phase 1: 優先リスト（Lite版など）を順に試す
+      // Phase 1: 優先リストを順に試す
       for (const model of PREFERRED_MODELS) {
         try {
           response = await callGeminiAPI(model, apiKey, nagiPersona);
-          
           if (response.ok) {
             usedModel = model;
             break;
           }
-
-          // 503 (Overloaded) なら1回だけ少し待ってリトライ
           if (response.status === 503) {
             await wait(1500);
             response = await callGeminiAPI(model, apiKey, nagiPersona);
@@ -209,37 +205,29 @@ JSON形式のみを出力してください（マークダウン記法不要）�
               break;
             }
           }
-          
           lastError = await response.text();
         } catch (e: any) {
           lastError = e.message;
         }
       }
 
-      // Phase 2: 全滅した場合、APIから「今使えるモデル」一覧を取得して自動選択する
-      // (モデル名変更や廃止に対応するため)
+      // Phase 2: 自動検出
       if (!response || !response.ok) {
         console.warn('Preferred models failed. Fetching dynamic model list...');
         try {
           const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
           const listData = await listRes.json();
-          
           if (listData.models) {
-            // "generateContent" に対応しているモデルのみ抽出
             const availableModels = listData.models
               .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
               .map((m: any) => m.name.replace('models/', ''));
 
-            console.log('Available models from API:', availableModels);
-
-            // "lite" や "flash" がつくモデルを優先してソート
             const autoCandidates = availableModels.sort((a: string, b: string) => {
               const aScore = (a.includes('lite') ? 2 : 0) + (a.includes('flash') ? 1 : 0);
               const bScore = (b.includes('lite') ? 2 : 0) + (b.includes('flash') ? 1 : 0);
               return bScore - aScore;
             });
 
-            // 自動検出したモデルで再トライ
             for (const model of autoCandidates) {
               response = await callGeminiAPI(model, apiKey, nagiPersona);
               if (response.ok) {
@@ -258,18 +246,20 @@ JSON形式のみを出力してください（マークダウン記法不要）�
         if (lastError.includes('429')) errorMsg = '利用制限(Quota)に達しました。しばらく時間を空けてから再度お試しください。';
         else if (lastError.includes('404')) errorMsg = '利用可能なAIモデルが見つかりませんでした。';
         else if (lastError.includes('503')) errorMsg = 'サーバーが混み合っています。';
-        
         throw new Error(`${errorMsg}\n(Details: ${lastError.slice(0, 100)}...)`);
       }
 
       console.log(`Successfully generated using: ${usedModel}`);
 
       const data = await response.json()
-      const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text
+      let generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text
       
       if (!generatedText) {
         throw new Error('生成されたテキストが空でした。')
       }
+
+      // JSONパースの強化
+      generatedText = generatedText.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
 
       try {
         const parsed = JSON.parse(generatedText)
@@ -278,11 +268,22 @@ JSON形式のみを出力してください（マークダウン記法不要）�
           body: parsed.body || generatedText
         })
       } catch (e) {
-        console.warn('JSON Parse Warning', e)
-        setStory({
-          title: '断片',
-          body: generatedText.replace(/[\{\}"]/g, '')
-        })
+        console.warn('JSON Parse Warning (Recovering...)', e)
+        
+        const titleMatch = generatedText.match(/"title"\s*:\s*"(.*?)"/);
+        const bodyMatch = generatedText.match(/"body"\s*:\s*"(.*?)(?:"|$)/s);
+
+        if (titleMatch || bodyMatch) {
+            setStory({
+                title: titleMatch ? titleMatch[1] : '無題',
+                body: bodyMatch ? bodyMatch[1].replace(/\\n/g, '\n') : generatedText.replace(/[{}"]/g, '').trim()
+            })
+        } else {
+            setStory({
+                title: '断片',
+                body: generatedText.replace(/[\{\}"]/g, '')
+            })
+        }
       }
 
     } catch (error: any) {
