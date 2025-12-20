@@ -109,10 +109,10 @@ export function WordsGenerator() {
 
   // ■ 優先的に試すモデルリスト
   const PREFERRED_MODELS = [
-    'gemini-2.5-flash-lite', // 最優先：軽量で制限にかかりにくい
-    'gemini-2.5-flash',      // 次点：最新版
-    'gemini-3-flash',        // 予備：次世代モデル
-    'gemini-2.0-flash'       // 予備：旧安定版
+    'gemini-2.5-flash-lite', // 最優先
+    'gemini-2.5-flash',      // 次点
+    'gemini-3-flash',        // 予備
+    'gemini-2.0-flash'       // 予備
   ];
 
   // API呼び出しのヘルパー関数
@@ -157,7 +157,6 @@ export function WordsGenerator() {
         throw new Error('APIキー (VITE_GEMINI_API_KEY) が見つかりません。.envファイルを確認してください。')
       }
 
-      // プロンプトを更新（nagi的エッセンスの再定義）
       const nagiPersona = `
 あなたは映像作家・脚本家「nagi」として、テーマ「${theme}」から架空の物語の冒頭（タイトル＋本文150字程度）を創作してください。行や段落は適宜改行し、読みやすくしてください。
 過去作のキャラクターや職業設定（カメラマン、メイド、小説家など）、またここに出てきた文言をそのまま使うのではなく、以下の「nagi的エッセンス」を学習した上で、抽象的に「nagi的エッセンス」をトレースし、全く新しい情景を描いてください。
@@ -258,11 +257,23 @@ JSON形式のみを出力してください（マークダウン記法不要）�
         throw new Error('生成されたテキストが空でした。')
       }
 
-      // JSONパースの強化
+      // JSONクリーニング
       generatedText = generatedText.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
 
       try {
-        const parsed = JSON.parse(generatedText)
+        let parsed = JSON.parse(generatedText)
+        
+        // ■■■ 修正箇所: 配列で返ってきた場合の対応 ■■■
+        // スクリーンショットのような [ {...} ] の形式に対応
+        if (Array.isArray(parsed)) {
+            parsed = parsed[0];
+        }
+
+        // オブジェクトであることを確認
+        if (!parsed || typeof parsed !== 'object') {
+            throw new Error('Invalid JSON structure');
+        }
+
         setStory({
           title: parsed.title || '無題',
           body: parsed.body || generatedText
@@ -270,6 +281,7 @@ JSON形式のみを出力してください（マークダウン記法不要）�
       } catch (e) {
         console.warn('JSON Parse Warning (Recovering...)', e)
         
+        // 正規表現での抽出（最後の手段）
         const titleMatch = generatedText.match(/"title"\s*:\s*"(.*?)"/);
         const bodyMatch = generatedText.match(/"body"\s*:\s*"(.*?)(?:"|$)/s);
 
@@ -281,7 +293,7 @@ JSON形式のみを出力してください（マークダウン記法不要）�
         } else {
             setStory({
                 title: '断片',
-                body: generatedText.replace(/[\{\}"]/g, '')
+                body: generatedText.replace(/[\{\}\[\]"]/g, '') // [] も除去
             })
         }
       }
