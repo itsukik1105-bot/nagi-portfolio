@@ -1,7 +1,7 @@
 export const siteConfig = {
   // サイト全体の基本情報
   siteName: "itsuki.kusanagi",
-  siteDescription: "Creative Direction / Filmmaking",
+  siteDescription: "Storytelling-Driven Creative Direction / Filmmaking",
   
   // ヒーロー背景動画のURL
   heroVideoUrl: "https://storage.googleapis.com/example2141/sozai_2.mp4",
