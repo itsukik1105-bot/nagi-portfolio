@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from 'microcms-js-sdk'
-import { format } from 'date-fns' // 日付フォーマット用
-import { Loader2, Image as ImageIcon } from 'lucide-react'
+import { format } from 'date-fns'
+import { Loader2 } from 'lucide-react' // 修正: ImageIcon を削除
 
 // ■ microCMSの型定義
 type Post = {
