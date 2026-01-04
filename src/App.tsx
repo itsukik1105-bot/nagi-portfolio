@@ -11,6 +11,7 @@ import { Contact } from './components/Contact'
 import { WordsGenerator } from './components/WordsGenerator'
 import { Footer } from './components/Footer'
 import { Timeline } from './components/Timeline'
+import { TimelineDetail } from './components/TimelineDetail'
 import { siteConfig } from './data/site-config'
 import { fetchWorks } from './utils/fetchWorks'
 import { type Work } from './data/works'
@@ -18,7 +19,7 @@ import { useContentProtection } from './hooks/useContentProtection'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from './components/ui/button'
 
-// 戻るボタン（タイムラインページ用）
+// 戻るボタン（タイムラインページ等で表示）
 function BackButton() {
   const location = useLocation()
   if (location.pathname === '/') return null
@@ -166,6 +167,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Portfolio />} />
           <Route path="/timeline" element={<Timeline />} />
+          <Route path="/timeline/:id" element={<TimelineDetail />} />
         </Routes>
       </div>
     </BrowserRouter>
