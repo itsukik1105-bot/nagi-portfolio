@@ -10,34 +10,10 @@ import { OpeningLoading } from './components/OpeningLoading'
 import { Contact } from './components/Contact'
 import { WordsGenerator } from './components/WordsGenerator'
 import { Footer } from './components/Footer'
-import { Timeline } from './components/Timeline'
-import { TimelineDetail } from './components/TimelineDetail'
 import { siteConfig } from './data/site-config'
 import { fetchWorks } from './utils/fetchWorks'
 import { type Work } from './data/works'
 import { useContentProtection } from './hooks/useContentProtection'
-import { ArrowLeft } from 'lucide-react'
-import { Button } from './components/ui/button'
-
-// 戻るボタン（タイムラインページ等で表示）
-function BackButton() {
-  const location = useLocation()
-  if (location.pathname === '/') return null
-
-  return (
-    <div className="fixed top-8 left-8 z-50 mix-blend-difference">
-      <Link to="/">
-        <Button
-          variant="ghost"
-          className="text-white hover:text-white/60 active:text-white/60 p-0 hover:bg-transparent active:bg-transparent transition-colors duration-300"
-        >
-          <ArrowLeft className="w-5 h-5 mr-2" />
-          <span className="text-xs tracking-[0.2em] font-medium uppercase">Home</span>
-        </Button>
-      </Link>
-    </div>
-  )
-}
 
 // ポートフォリオ（トップページ）の中身
 function Portfolio() {
@@ -94,15 +70,6 @@ function Portfolio() {
       
       <WordsGenerator />
 
-      {/* Timelineへのリンクボタン */}
-      <div className="flex justify-center py-20 bg-black relative z-10">
-        <Link to="/timeline" className="group relative px-10 py-4 rounded-full border border-white/20 hover:bg-white/10 transition-all duration-500">
-          <span className="text-xs tracking-[0.3em] text-white/60 group-hover:text-white uppercase font-light">
-            View Timeline
-          </span>
-        </Link>
-      </div>
-
       <Footer siteConfig={siteConfig} />
     </>
   )
@@ -129,7 +96,6 @@ function App() {
       <div className="min-h-screen text-[#f0f0f0] font-sans selection:bg-white selection:text-black bg-black relative cursor-none">
         <OpeningLoading />
         <CustomCursor />
-        <BackButton />
         
         <style>{`
           /* フォント設定 */
@@ -163,11 +129,8 @@ function App() {
 
         <div className="film-grain"></div>
         
-        {/* ページ遷移の設定 */}
         <Routes>
           <Route path="/" element={<Portfolio />} />
-          <Route path="/timeline" element={<Timeline />} />
-          <Route path="/timeline/:id" element={<TimelineDetail />} />
         </Routes>
       </div>
     </BrowserRouter>
