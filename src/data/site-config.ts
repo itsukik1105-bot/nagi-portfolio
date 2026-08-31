@@ -3,8 +3,10 @@ export const siteConfig = {
   siteName: "itsuki.kusanagi",
   siteDescription: "Storytelling-Driven Filmmaking",
   
-  // ヒーロー背景動画のURL
-  heroVideoUrl: "https://storage.googleapis.com/example2141/sozai_2.mp4",
+  // ヒーロー背景動画（public/ に同梱。差し替えるときは public/hero.mp4 を置き換える）
+  heroVideoUrl: "/hero.mp4",
+  // 動画の読み込み前・読み込み失敗時に表示する静止画
+  heroPosterUrl: "/hero-poster.jpg",
   
   // コンタクト情報（Contactページで使用）
   contactEmail: "nagi@example.com",

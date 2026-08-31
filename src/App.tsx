@@ -58,6 +58,7 @@ function Portfolio() {
 
       <Hero 
         videoUrl={siteConfig.heroVideoUrl} 
+        posterUrl={siteConfig.heroPosterUrl} 
         title={siteConfig.siteName}
         subtitle={siteConfig.siteDescription}
         onAboutClick={() => setIsAboutOpen(true)}

@@ -1,15 +1,20 @@
+import { useState } from 'react'
 import { Button } from './ui/button'
 import { useGlitchText } from '../hooks/useGlitchText'
 
 interface HeroProps {
   videoUrl?: string
+  posterUrl?: string
   title: string
   subtitle: string
   onAboutClick: () => void
 }
 
-export function Hero({ videoUrl, title, subtitle, onAboutClick }: HeroProps) {
+export function Hero({ videoUrl, posterUrl, title, subtitle, onAboutClick }: HeroProps) {
   const { displayText: buttonText, triggerGlitch: triggerButtonGlitch } = useGlitchText("VIEW PROFILE")
+  // 動画の読み込みに失敗したら静止画へフォールバックする
+  const [videoFailed, setVideoFailed] = useState(false)
+  const showVideo = Boolean(videoUrl) && !videoFailed
 
   return (
     <section 
@@ -19,25 +24,34 @@ export function Hero({ videoUrl, title, subtitle, onAboutClick }: HeroProps) {
       
       {/* 背景エリア */}
       <div className="absolute inset-0 z-0 overflow-hidden">
-        {videoUrl ? (
+        {showVideo ? (
           <div className="w-full h-full animate-slow-zoom">
             <video
               autoPlay
               loop
               muted
               playsInline
+              preload="auto"
+              // 動画が届くまでの間はポスター画像を表示する
+              poster={posterUrl}
+              onError={() => setVideoFailed(true)}
               // スマホでは object-position を調整して動画の見せたい部分を表示
               className="w-full h-full object-cover object-center md:object-center filter contrast-[1.1] saturate-[0.9] brightness-[0.95]"
             >
-              <source src={videoUrl} type="video/mp4" />
+              <source src={videoUrl} type="video/mp4" onError={() => setVideoFailed(true)} />
             </video>
           </div>
+        ) : posterUrl ? (
+          <div
+            className="w-full h-full bg-cover bg-center animate-slow-zoom filter contrast-[1.1] saturate-[0.9] brightness-[0.95]"
+            style={{ backgroundImage: `url(${posterUrl})` }}
+          />
         ) : (
           <div className="w-full h-full bg-[#050505]" />
         )}
         
         {/* ノイズテクスチャ */}
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.12] mix-blend-overlay"></div>
+        <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.12] mix-blend-overlay"></div>
         
         {/* ビネット効果 - スマホでは軽めに */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.2)_100%)] md:bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]"></div>
